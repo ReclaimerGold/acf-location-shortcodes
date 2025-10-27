@@ -353,13 +353,12 @@ Create a complete location directory:
 |-------|---------|
 | `.acf-ls-communities` | Communities container |
 | `.acf-ls-communities__item` | Individual community |
-| `.acf-ls-communities__emoji` | Community emoji |
+| `.acf-ls-communities__emoji` | Community emoji (🏠) |
 | `.acf-ls-communities__text` | Community text |
 | `.acf-ls-locations` | Locations container |
 | `.acf-ls-locations__item` | Individual location |
 | `.acf-ls-locations__emoji` | Location emoji (📍) |
 | `.acf-ls-locations__link` | Location link |
-| `.acf-ls-locations__text` | Location text |
 
 ### Layout Modifiers
 

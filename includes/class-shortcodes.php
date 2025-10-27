@@ -280,10 +280,10 @@ class ACF_Location_Shortcodes_Shortcodes {
 					<?php endif; ?>
 					<?php if ( $location_url ) : ?>
 						<a href="<?php echo esc_url( $location_url ); ?>" class="acf-ls-locations__link">
-							<span class="acf-ls-locations__text"><?php echo esc_html( $location->post_title ); ?></span>
+							<?php echo esc_html( $location->post_title ); ?>
 						</a>
 					<?php else : ?>
-						<span class="acf-ls-locations__text"><?php echo esc_html( $location->post_title ); ?></span>
+						<?php echo esc_html( $location->post_title ); ?>
 					<?php endif; ?>
 				</li>
 			<?php endforeach; ?>
