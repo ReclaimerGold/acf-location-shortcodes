@@ -183,7 +183,7 @@ class ACF_Location_Shortcodes_Shortcodes {
 	/**
 	 * Render location list shortcode.
 	 *
-	 * Displays all top-level service locations with map marker pins.
+	 * Displays physical locations and their child service areas.
 	 *
 	 * @since 1.0.0
 	 * @param array $atts Shortcode attributes.
@@ -193,7 +193,6 @@ class ACF_Location_Shortcodes_Shortcodes {
 		// Parse attributes.
 		$atts = shortcode_atts(
 			array(
-				'type'       => 'all', // 'all', 'physical', 'service'
 				'orderby'    => 'title',
 				'order'      => 'ASC',
 				'limit'      => 0,
@@ -205,53 +204,34 @@ class ACF_Location_Shortcodes_Shortcodes {
 		);
 
 		// Sanitize attributes.
-		$type        = sanitize_key( $atts['type'] );
 		$orderby     = sanitize_key( $atts['orderby'] );
 		$order       = strtoupper( sanitize_key( $atts['order'] ) ) === 'DESC' ? 'DESC' : 'ASC';
 		$limit       = absint( $atts['limit'] );
 		$class       = sanitize_html_class( $atts['class'] );
 		$show_emoji  = $atts['show_emoji'] === 'yes';
 
-		// Get locations.
+		// Get physical locations.
 		$query_args = array(
 			'orderby' => $orderby,
 			'order'   => $order,
 		);
 
-		if ( $limit > 0 ) {
-			$query_args['posts_per_page'] = $limit;
+		$physical_locations = $this->acf_helpers->get_physical_locations();
+
+		// Apply ordering.
+		if ( 'title' === $orderby ) {
+			usort( $physical_locations, function( $a, $b ) use ( $order ) {
+				$result = strcmp( $a->post_title, $b->post_title );
+				return $order === 'DESC' ? -$result : $result;
+			});
 		}
 
-		// Get locations based on type.
-		if ( 'physical' === $type ) {
-			$locations = $this->acf_helpers->get_physical_locations();
-			
-			// Apply ordering manually since get_physical_locations filters the results.
-			if ( 'title' === $orderby ) {
-				usort( $locations, function( $a, $b ) use ( $order ) {
-					$result = strcmp( $a->post_title, $b->post_title );
-					return $order === 'DESC' ? -$result : $result;
-				});
-			}
-			
-			if ( $limit > 0 ) {
-				$locations = array_slice( $locations, 0, $limit );
-			}
-		} else {
-			$all_locations = $this->acf_helpers->get_all_locations( $query_args );
-			
-			if ( 'service' === $type ) {
-				// Filter to service areas only.
-				$locations = array_filter( $all_locations, function( $location ) {
-					return ! $this->acf_helpers->is_physical_location( $location->ID );
-				});
-			} else {
-				$locations = $all_locations;
-			}
+		if ( $limit > 0 ) {
+			$physical_locations = array_slice( $physical_locations, 0, $limit );
 		}
 
 		// Handle empty data.
-		if ( empty( $locations ) ) {
+		if ( empty( $physical_locations ) ) {
 			return $this->render_error( __( 'No locations found.', 'acf-location-shortcodes' ) );
 		}
 
@@ -268,24 +248,30 @@ class ACF_Location_Shortcodes_Shortcodes {
 		ob_start();
 		?>
 		<ul class="<?php echo esc_attr( implode( ' ', $css_classes ) ); ?>">
-			<?php foreach ( $locations as $location ) : ?>
+			<?php foreach ( $physical_locations as $location ) : ?>
 				<?php
-				$location_url = get_permalink( $location->ID );
-				$is_physical  = $this->acf_helpers->is_physical_location( $location->ID );
-				$item_class   = $is_physical ? 'acf-ls-locations__item--physical' : 'acf-ls-locations__item--service';
+				$service_areas = $this->acf_helpers->get_service_areas_by_physical_location( $location->ID );
 				?>
-				<li class="acf-ls-locations__item <?php echo esc_attr( $item_class ); ?>">
+				<li class="acf-ls-locations__item acf-ls-locations__item--physical">
 					<?php if ( $show_emoji ) : ?>
 						<span class="acf-ls-locations__emoji" aria-hidden="true">📍</span>
 					<?php endif; ?>
-					<?php if ( $location_url ) : ?>
-						<a href="<?php echo esc_url( $location_url ); ?>" class="acf-ls-locations__link">
-							<?php echo esc_html( $location->post_title ); ?>
-						</a>
-					<?php else : ?>
+					<span class="acf-ls-locations__text">
 						<?php echo esc_html( $location->post_title ); ?>
-					<?php endif; ?>
+					</span>
 				</li>
+				<?php if ( ! empty( $service_areas ) ) : ?>
+					<?php foreach ( $service_areas as $service_area ) : ?>
+						<li class="acf-ls-locations__item acf-ls-locations__item--service">
+							<?php if ( $show_emoji ) : ?>
+								<span class="acf-ls-locations__emoji" aria-hidden="true">📍</span>
+							<?php endif; ?>
+							<span class="acf-ls-locations__text">
+								<?php echo esc_html( $service_area->post_title ); ?>
+							</span>
+						</li>
+					<?php endforeach; ?>
+				<?php endif; ?>
 			<?php endforeach; ?>
 		</ul>
 		<?php

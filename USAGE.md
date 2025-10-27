@@ -169,15 +169,16 @@ Metro area from specific location
 
 ### `[location_list]`
 
-Display all service locations with map marker pins (📍).
+Display physical locations and their child service areas with map marker pins (📍).
+
+Each physical location is listed, followed by any service areas that have that physical location set in their `servicing_physical_location` field.
 
 **Attributes:**
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `type` | string | 'all' | Location type: 'all', 'physical', 'service' |
 | `orderby` | string | 'title' | Sort by: 'title', 'date', 'ID' |
 | `order` | string | 'ASC' | Sort order: 'ASC' or 'DESC' |
-| `limit` | int | 0 (all) | Maximum locations to show |
+| `limit` | int | 0 (all) | Maximum physical locations to show |
 | `class` | string | '' | Additional CSS class |
 | `show_emoji` | string | 'yes' | Show map pin emoji ('yes'/'no') |
 
@@ -186,17 +187,22 @@ Display all service locations with map marker pins (📍).
 ```
 [location_list]
 ```
-Output: 📍 Sioux Falls  📍 West Fargo  📍 Rapid City
+Output: 
+- 📍 Sioux Falls (physical location)
+- 📍 Brandon (service area under Sioux Falls)
+- 📍 Harrisburg (service area under Sioux Falls)
+- 📍 West Fargo (physical location)
+- 📍 Fargo (service area under West Fargo)
 
 ```
-[location_list type="physical" orderby="title"]
+[location_list orderby="title" order="DESC"]
 ```
-Show only physical locations, sorted alphabetically
+Show physical locations in reverse alphabetical order with their service areas
 
 ```
-[location_list type="service" limit="10"]
+[location_list limit="3"]
 ```
-Show 10 service areas
+Show first 3 physical locations and all their service areas
 
 ```
 [location_list class="location-directory" show_emoji="no"]
@@ -315,15 +321,15 @@ Display all service areas with their communities:
 
 ### 3. Location Directory
 
-Create a complete location directory:
+Create a complete hierarchical location directory:
 
 ```html
-<h2>Physical Locations</h2>
-[location_list type="physical" orderby="title"]
-
-<h2>Service Areas</h2>
-[location_list type="service" orderby="title"]
+<h2>All Service Locations</h2>
+<p>Physical locations are listed with their service areas below them.</p>
+[location_list orderby="title"]
 ```
+
+This will display all physical locations, each followed by their child service areas.
 
 ### 4. Location-Specific Testimonials
 
@@ -358,7 +364,7 @@ Create a complete location directory:
 | `.acf-ls-locations` | Locations container |
 | `.acf-ls-locations__item` | Individual location |
 | `.acf-ls-locations__emoji` | Location emoji (📍) |
-| `.acf-ls-locations__link` | Location link |
+| `.acf-ls-locations__text` | Location text |
 
 ### Layout Modifiers
 
