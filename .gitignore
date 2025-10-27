@@ -1,0 +1,80 @@
+# WordPress and Plugin Files
+.DS_Store
+.htaccess
+wp-config.php
+wp-content/uploads/
+wp-content/backup*/
+wp-content/cache/
+wp-content/upgrade/
+
+# IDE and Editor Files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+*.tmproj
+*.code-workspace
+
+# OS Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Logs and Databases
+*.log
+*.sql
+*.sqlite
+error_log
+debug.log
+
+# Composer
+/vendor/
+composer.lock
+
+# NPM
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Build Files
+/build/
+/dist/
+*.min.js
+*.min.css
+*.map
+
+# Temporary Files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+
+# Environment Files
+.env
+.env.local
+.env.*.local
+
+# Testing
+/tests/coverage/
+phpunit.xml
+.phpunit.result.cache
+
+# macOS
+.AppleDouble
+.LSOverride
+._*
+
+# Plugin Specific
+languages/*.pot

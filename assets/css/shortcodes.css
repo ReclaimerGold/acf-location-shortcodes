@@ -1,0 +1,250 @@
+/**
+ * ACF Location Shortcodes - Frontend Styles
+ *
+ * @package ACF_Location_Shortcodes
+ * @since 1.0.0
+ */
+
+/* ========================================
+   Community List Styles
+   ======================================== */
+
+.acf-ls-communities {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem 1.5rem;
+	list-style: none;
+	padding: 0;
+	margin: 1rem 0;
+	font-size: 1rem;
+	line-height: 1.5;
+}
+
+/* ========================================
+   Location List Styles
+   ======================================== */
+
+.acf-ls-locations {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem 1.5rem;
+	list-style: none;
+	padding: 0;
+	margin: 1rem 0;
+	font-size: 1rem;
+	line-height: 1.5;
+}
+
+.acf-ls-locations__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+}
+
+.acf-ls-locations--with-emoji .acf-ls-locations__emoji {
+	font-style: normal;
+	font-size: 1.1em;
+	line-height: 1;
+	flex-shrink: 0;
+}
+
+.acf-ls-locations__link {
+	display: inline-flex;
+	align-items: center;
+	text-decoration: none;
+	color: inherit;
+	transition: color 0.2s ease;
+}
+
+.acf-ls-locations__link:hover {
+	text-decoration: underline;
+	color: #0073aa;
+}
+
+.acf-ls-locations__text {
+	display: inline;
+}
+
+.acf-ls-communities__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+}
+
+/* Emoji styling */
+.acf-ls-communities--with-emoji .acf-ls-communities__emoji {
+	font-style: normal;
+	font-size: 1.1em;
+	line-height: 1;
+	flex-shrink: 0;
+}
+
+.acf-ls-communities__text {
+	display: inline;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+	.acf-ls-communities {
+		gap: 0.5rem 1rem;
+		font-size: 0.95rem;
+	}
+	
+	.acf-ls-locations {
+		gap: 0.5rem 1rem;
+		font-size: 0.95rem;
+	}
+}
+
+@media screen and (max-width: 480px) {
+	.acf-ls-communities {
+		gap: 0.5rem;
+		flex-direction: column;
+		align-items: flex-start;
+	}
+	
+	.acf-ls-locations {
+		gap: 0.5rem;
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}
+
+/* ========================================
+   Alternative Vertical Layout
+   ======================================== */
+
+.acf-ls-communities--vertical {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.5rem;
+}
+
+.acf-ls-locations--vertical {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.5rem;
+}
+
+/* ========================================
+   Compact Layout
+   ======================================== */
+
+.acf-ls-communities--compact {
+	gap: 0.5rem 1rem;
+	font-size: 0.9rem;
+}
+
+.acf-ls-communities--compact .acf-ls-communities__emoji {
+	font-size: 1em;
+}
+
+.acf-ls-locations--compact {
+	gap: 0.5rem 1rem;
+	font-size: 0.9rem;
+}
+
+.acf-ls-locations--compact .acf-ls-locations__emoji {
+	font-size: 1em;
+}
+
+/* ========================================
+   Grid Layout Option
+   ======================================== */
+
+.acf-ls-communities--grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 0.75rem;
+}
+
+.acf-ls-locations--grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 0.75rem;
+}
+
+@media screen and (max-width: 768px) {
+	.acf-ls-communities--grid {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	}
+	
+	.acf-ls-locations--grid {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	}
+}
+
+@media screen and (max-width: 480px) {
+	.acf-ls-communities--grid {
+		grid-template-columns: 1fr;
+	}
+	
+	.acf-ls-locations--grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ========================================
+   Error Messages
+   ======================================== */
+
+.acf-ls-error {
+	padding: 10px 15px;
+	background-color: #fff3cd;
+	border-left: 4px solid #ffc107;
+	color: #856404;
+	margin: 1rem 0;
+	border-radius: 4px;
+	font-size: 0.95rem;
+}
+
+/* ========================================
+   Accessibility
+   ======================================== */
+
+.acf-ls-communities__emoji[aria-hidden="true"] {
+	pointer-events: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+	.acf-ls-communities__item {
+		border: 1px solid currentColor;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+	}
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+	.acf-ls-communities,
+	.acf-ls-communities__item {
+		transition: none;
+	}
+}
+
+/* ========================================
+   Print Styles
+   ======================================== */
+
+@media print {
+	.acf-ls-communities {
+		display: block;
+	}
+	
+	.acf-ls-communities__item {
+		display: inline;
+	}
+	
+	.acf-ls-communities__item:not(:last-child)::after {
+		content: ', ';
+	}
+	
+	.acf-ls-error {
+		display: none;
+	}
+}
