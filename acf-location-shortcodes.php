@@ -1,19 +1,21 @@
 <?php
 /**
- * Plugin Name: ACF Location Shortcodes
- * Plugin URI: https://github.com/rreiffenberger/acf-location-shortcodes
- * Description: Provides shortcodes and Elementor integration for displaying and filtering location data from ACF custom post types.
- * Version: 1.1.0
+ * Plugin Name: ACF Service Management Suite
+ * Plugin URI: https://github.com/ReclaimerGold/acf-service-management-suite
+ * Description: Complete service business management for WordPress. Manage locations, service areas, and team members with powerful shortcodes, Elementor integration, and pre-configured ACF post type structure. Perfect for multi-location businesses, service providers, and professional practices. Licensed under GPL v2 or later - https://www.gnu.org/licenses/gpl-2.0.html
+ * Version: 2.0.0
  * Requires at least: 5.8
  * Requires PHP: 7.4
- * Author: Ryan Reiffenberger
- * Author URI: https://github.com/rreiffenberger
+ * Author: Falls Technology Group, LLC
+ * Author URI: https://github.com/ReclaimerGold
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: acf-location-shortcodes
+ * Text Domain: acf-sms
  * Domain Path: /languages
  *
- * @package ACF_Location_Shortcodes
+ * @package ACF_Service_Management_Suite
+ * @author Ryan T. M. Reiffenberger
+ * @copyright 2025 Falls Technology Group, LLC
  */
 
 // Exit if accessed directly.
@@ -22,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants.
-define( 'ACF_LS_VERSION', '1.1.0' );
+define( 'ACF_LS_VERSION', '2.0.0' );
 define( 'ACF_LS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ACF_LS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'ACF_LS_PLUGIN_FILE', __FILE__ );
@@ -181,7 +183,7 @@ class ACF_Location_Shortcodes {
 	 */
 	public function load_textdomain() {
 		load_plugin_textdomain(
-			'acf-location-shortcodes',
+			'acf-sms',
 			false,
 			dirname( plugin_basename( __FILE__ ) ) . '/languages'
 		);
@@ -205,8 +207,8 @@ class ACF_Location_Shortcodes {
 		$class   = 'notice notice-error';
 		$message = sprintf(
 			/* translators: %s: ACF plugin link */
-			__( 'ACF Location Shortcodes requires Advanced Custom Fields to be installed and active. %s', 'acf-location-shortcodes' ),
-			'<a href="' . esc_url( admin_url( 'plugin-install.php?s=advanced+custom+fields&tab=search&type=term' ) ) . '">' . __( 'Install ACF now', 'acf-location-shortcodes' ) . '</a>'
+			__( 'ACF Service Management Suite requires Advanced Custom Fields to be installed and active. %s', 'acf-sms' ),
+			'<a href="' . esc_url( admin_url( 'plugin-install.php?s=advanced+custom+fields&tab=search&type=term' ) ) . '">' . __( 'Install ACF now', 'acf-sms' ) . '</a>'
 		);
 
 		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses_post( $message ) );
@@ -227,7 +229,7 @@ class ACF_Location_Shortcodes {
 		}
 
 		$log_message = sprintf(
-			'[ACF Location Shortcodes][%s] %s',
+			'[ACF Service Management Suite][%s] %s',
 			strtoupper( $level ),
 			$message
 		);

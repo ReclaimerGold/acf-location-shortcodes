@@ -1,676 +1,545 @@
-# Copilot Instructions - ACF Location Shortcodes Plugin
+# Copilot Instructions - ACF Service Management Suite
 
-## Project Context
-You are assisting in the development of a WordPress plugin called **ACF Location Shortcodes**. This plugin provides shortcodes and Elementor integration for displaying and filtering location data from Advanced Custom Fields (ACF) custom post types.
+## Project Identity
 
-## Project Objectives
+**Plugin Name:** ACF Service Management Suite  
+**Purpose:** Complete service business management for WordPress - locations, service areas, and team members  
+**Author:** Falls Technology Group, LLC  
+**Developer:** Ryan T. M. Reiffenberger (github.com/ReclaimerGold)  
+**License:** GPL v2 or later  
+**Support:** https://github.com/ReclaimerGold/acf-service-management-suite  
+**Current Version:** 2.0.0
 
-### Primary Goals
-1. **Community List Shortcode:** Create a shortcode that displays communities from the `surrounding_community_list` ACF field as a horizontal bullet list with house emoji (🏠) bullets
-2. **Elementor Query Filters:** Enable filtering of Elementor Loop Grids and Loop Carousels by assigned service location
+## Core Principles
 
-### Secondary Goals
-- Maintain clean, documented, WordPress-standard code
-- Ensure performance and scalability
-- Provide flexibility through shortcode attributes
-- Support both physical locations and service areas
+### 1. NO FLUFF DOCUMENTATION
+- Every doc file must serve a specific, essential purpose
+- Combine related content - no fragmentation across multiple files
+- Use inline PHPDoc comments for code documentation
+- README.md is the primary user-facing doc (setup, usage, examples)
+- DEVELOP.md for extension/contribution only
+- CHANGELOG.md for version history only
+- No PLAN.md, USAGE.md, ROADMAP.md, or other redundant docs
+
+### 2. MODERN PHP WORDPRESS PLUGIN STANDARDS
+- WordPress 5.8+ / PHP 7.4+ minimum
+- Follow WordPress Coding Standards (WPCS) strictly
+- Singleton pattern for main plugin class
+- Namespacing not required but class prefixing mandatory
+- PSR-4-style autoloading structure (manual requires acceptable)
+- Proper sanitization, escaping, and nonce verification
+- i18n ready with proper text domain
+- Object caching with reasonable expiration (1 hour default)
+
+### 3. SECURITY FIRST
+```php
+// ALWAYS check capabilities before sensitive operations
+if ( ! current_user_can( 'manage_options' ) ) {
+    wp_die( __( 'Insufficient permissions', 'acf-sms' ) );
+}
+
+// ALWAYS sanitize input
+$location_id = absint( $_POST['location_id'] );
+$field_name = sanitize_text_field( $_POST['field'] );
+
+// ALWAYS escape output
+echo esc_html( $title );
+echo esc_attr( $class );
+echo esc_url( $link );
+
+// ALWAYS verify nonces for forms/AJAX
+check_ajax_referer( 'acf_sms_action', 'nonce' );
+```
+
+### 4. PERFORMANCE OPTIMIZATION
+```php
+// Use WordPress object cache
+$cached = wp_cache_get( $key, 'acf_sms_locations' );
+if ( false === $cached ) {
+    $cached = expensive_operation();
+    wp_cache_set( $key, $cached, 'acf_sms_locations', HOUR_IN_SECONDS );
+}
+
+// Lazy load integrations
+if ( did_action( 'elementor/loaded' ) ) {
+    // Only load Elementor integration if needed
+}
+
+// Minimize database queries
+// Cache ACF field checks
+// Use transients for expensive admin checks
+```
+
+### 5. ERROR HANDLING PHILOSOPHY
+- Errors must be **actionable** - tell user how to fix it
+- Include **context** - what was attempted, what was found
+- Provide **debug data** when ACF_LS_DEBUG enabled
+- Only show debug to users with `edit_posts` capability
+- Log important events to error_log when debug enabled
 
 ## Technical Stack
 
-### Required Technologies
-- **WordPress:** 5.8+
-- **PHP:** 7.4+
-- **ACF (Advanced Custom Fields):** 5.0+ (Free or Pro)
-- **Elementor:** 3.0+ (optional, for query filter features)
+**Required:**
+- WordPress 5.8+
+- PHP 7.4+
+- ACF 5.0+ (Free or Pro)
 
-### Development Standards
-- Follow WordPress Coding Standards (WPCS)
-- Use PSR-4 autoloading for classes
-- Implement proper sanitization and escaping
-- Use WordPress i18n functions for all user-facing strings
-- Write PHPDoc comments for all functions and classes
+**Optional:**
+- Elementor 3.0+ (for query filtering)
 
-## ACF Schema Reference
+**Included:**
+- Complete post type structure (`location`, `team-member`)
+- Pre-configured ACF field groups (15 total fields)
+- Team Member Type taxonomy
 
-### Custom Post Type: `location`
-**Post Type Key:** `location`
-**Label:** Service Locations
+## File Structure
 
-### Key ACF Fields
-| Field Name | Field Key | Type | Usage |
-|------------|-----------|------|-------|
-| `surrounding_community_list` | `field_68ffbda5fdb3c` | Text | Comma-separated list of surrounding communities |
-| `service_area_shorthand` | `field_68ffc4ed7c72e` | Text | Short name for service area |
-| `address` | `field_68f6b00fd62cb` | Text | Physical address (empty for service areas) |
-| `phone_number` | `field_68f6b01cd62cc` | Text | Location phone number |
-| `servicing_physical_location` | `field_68ffbb50ffe66` | Post Object | Parent physical location for service areas |
-| `full_service_area_name` | `field_68ffbc41d8abc` | Text | Full regional name |
-| `located_near` | `field_68ffbf0992dc2` | Text | Nearby landmark |
-| `metro_area_name` | `field_68ffc0f0d35d1` | Text | Metro area name |
-| `county_name` | `field_68ffc21e953c0` | Text | County name |
-| `team_members_assigned` | `field_68ffc32b9e238` | Relationship | Team members at location |
-
-### Location Type Logic
-- **Physical Location:** `address` field is NOT empty
-- **Service Area:** `address` field IS empty, references a physical location via `servicing_physical_location`
-
-## Plugin Architecture
-
-### File Structure
 ```
-acf-location-shortcodes/
-├── acf-location-shortcodes.php          # Main plugin file
+acf-service-management-suite/
+├── acf-service-management-suite.php     # Bootstrap (constants, singleton, hooks)
 ├── includes/
-│   ├── class-shortcodes.php             # Shortcode handlers
-│   ├── class-elementor-integration.php  # Elementor query filters
-│   └── class-acf-helpers.php            # ACF data retrieval
+│   ├── class-acf-helpers.php            # ACF data retrieval + caching
+│   ├── class-shortcodes.php             # All shortcode handlers
+│   └── class-elementor-integration.php  # Elementor query filters
 ├── assets/
-│   ├── css/
-│   │   └── shortcodes.css               # Frontend styles
-│   └── js/
-│       └── elementor-controls.js        # Elementor editor JS
-├── copilot-instructions.md              # This file
-├── PLAN.md                              # Development plan
-└── README.md                            # Documentation
+│   ├── css/shortcodes.css               # Minimal frontend styles
+│   └── js/elementor-controls.js         # Elementor editor controls
+├── acf-export-2025-10-28.json           # Field structure (import ready)
+├── README.md                            # PRIMARY documentation (setup + usage)
+├── DEVELOP.md                           # Extension/contribution guide
+├── CHANGELOG.md                         # Version history
+└── copilot-instructions.md              # This file
 ```
 
-### Class Naming Conventions
-- Main plugin class: `ACF_Location_Shortcodes`
-- Shortcodes class: `ACF_Location_Shortcodes_Shortcodes`
-- Elementor integration: `ACF_Location_Shortcodes_Elementor`
-- ACF helpers: `ACF_Location_Shortcodes_ACF_Helpers`
+**NO OTHER .md FILES ALLOWED** - Consolidate or delete.
 
-## Coding Guidelines
+## Class Architecture
 
-### WordPress Best Practices
-1. **Prefix Everything:** Use `acf_ls_` prefix for functions, `acf-ls-` for CSS classes
-2. **Sanitization:** Always sanitize user input and ACF data
-3. **Escaping:** Escape all output (`esc_html()`, `esc_attr()`, `esc_url()`)
-4. **Nonces:** Use nonces for any form submissions (if applicable)
-5. **Capabilities:** Check user capabilities before allowing actions
-6. **Hooks:** Use appropriate WordPress hooks (actions/filters)
-
-### Code Examples
-
-#### Retrieving ACF Field Data
+### Main Plugin Class: `ACF_Location_Shortcodes`
 ```php
-// Always check if ACF exists
-if ( ! function_exists( 'get_field' ) ) {
-    return;
-}
-
-// Get field with fallback
-$communities = get_field( 'surrounding_community_list', $post_id );
-if ( empty( $communities ) ) {
-    return '';
+class ACF_Location_Shortcodes {
+    private static $instance = null;
+    public $shortcodes;
+    public $acf_helpers;
+    public $elementor;
+    
+    public static function instance() { }
+    private function __construct() { }
+    private function init_hooks() { }
+    public function check_dependencies() { }
+    public function init() { }
+    private function includes() { }
+    public static function log( $message, $data = array(), $level = 'info' ) { }
 }
 ```
 
-#### Shortcode Registration
-```php
-add_shortcode( 'location_communities', array( $this, 'render_communities_list' ) );
-```
+### ACF Helpers: `ACF_Location_Shortcodes_ACF_Helpers`
+- `get_surrounding_communities( $post_id )` - Get + cache communities
+- `parse_comma_list( $string )` - Parse CSV to array
+- `is_physical_location( $post_id )` - Check if has address
+- `get_servicing_location( $post_id )` - Get parent location
+- `get_location_field( $field, $post_id, $default )` - Generic getter
+- `field_exists( $field_name, $post_id )` - Validation (v1.1.0+)
+- `get_field_names( $post_id )` - List all fields (v1.1.0+)
+- `clear_cache( $post_id )` - Manual cache clear
 
-#### Shortcode Handler Pattern
+### Shortcodes: `ACF_Location_Shortcodes_Shortcodes`
+- `[location_communities]` - Display surrounding communities
+- `[location_info field="..."]` - Display any ACF field
+- `[location_list]` - Location directory (two modes)
+- `[location_address]` - Physical address (auto parent lookup)
+- `render_error( $message, $debug_data = array() )` - Error display
+
+### Elementor: `ACF_Location_Shortcodes_Elementor`
+- Hooks: `elementor/element/before_section_end` (add controls)
+- Hooks: `elementor/query/query_args` (filter queries)
+- Controls: Filter toggle, location selector, AND/OR mode
+- Query modification for relationship field filtering
+
+## ACF Field Reference
+
+### Location Post Type Fields (11)
+- `service_area_shorthand` (Text) - "Sioux Falls, SD"
+- `address` (Text) - Physical address (empty = service area)
+- `phone_number` (Text) - Contact number
+- `location_site_url` (URL) - Dedicated site
+- `servicing_physical_location` (Post Object) - Parent location
+- `full_service_area_name` (Text) - "Greater Sioux Falls"
+- `located_near` (Text) - "Near Falls Park"
+- `metro_area_name` (Text) - "Sioux Falls Metro"
+- `county_name` (Text) - "Minnehaha County"
+- `surrounding_community_list` (Text) - CSV communities
+- `team_members_assigned` (Relationship) - Team members
+
+### Team Member Post Type Fields (4)
+- `profile_picture` (Image) - Photo
+- `title` (Text) - Job title
+- `location` (Select Multiple) - Assigned locations
+- `full_profile_url` (URL) - Full bio link
+
+**Location Type Logic:**
+- WITH `address` = Physical Location
+- WITHOUT `address` = Service Area
+
+## Coding Patterns
+
+### Shortcode Handler Template
 ```php
-public function render_communities_list( $atts ) {
+public function render_shortcode_name( $atts ) {
     // Parse attributes with defaults
     $atts = shortcode_atts( array(
         'location_id' => get_the_ID(),
-        'limit'       => 0,
+        'field'       => '',
+        'default'     => '',
         'class'       => '',
-    ), $atts, 'location_communities' );
+    ), $atts, 'shortcode_name' );
     
-    // Sanitize
+    // Sanitize inputs
     $location_id = absint( $atts['location_id'] );
-    $limit       = absint( $atts['limit'] );
+    $field       = sanitize_text_field( $atts['field'] );
     $class       = sanitize_html_class( $atts['class'] );
     
-    // Get data
-    $communities = $this->get_communities( $location_id );
+    // Validate
+    if ( empty( $location_id ) || 'location' !== get_post_type( $location_id ) ) {
+        return $this->render_error(
+            sprintf( __( 'Invalid location ID: %d', 'acf-sms' ), $location_id )
+        );
+    }
+    
+    // Get data with error handling
+    $result = $this->acf_helpers->get_location_field_validated( $field, $location_id );
+    if ( ! $result['success'] ) {
+        return $this->render_error( $result['error'], $result['debug'] );
+    }
     
     // Build output
     ob_start();
-    include plugin_dir_path( __FILE__ ) . '../templates/communities-list.php';
+    ?>
+    <div class="acf-sms-<?php echo esc_attr( $class ); ?>">
+        <?php echo esc_html( $result['data'] ); ?>
+    </div>
+    <?php
     return ob_get_clean();
 }
 ```
 
-#### Elementor Query Filter Pattern
+### Error Rendering Pattern (v1.1.0+)
 ```php
-add_filter( 'elementor/query/query_args', array( $this, 'filter_by_location' ), 10, 2 );
-
-public function filter_by_location( $query_args, $widget ) {
-    $settings = $widget->get_settings();
+private function render_error( $message, $debug_data = array() ) {
+    // Basic error for all users
+    $output = sprintf(
+        '<div class="acf-sms-error"><p>%s</p></div>',
+        esc_html( $message )
+    );
     
-    if ( ! empty( $settings['filter_by_location'] ) && $settings['filter_by_location'] === 'yes' ) {
-        $location_id = ! empty( $settings['location_id'] ) ? $settings['location_id'] : 0;
-        
-        if ( $location_id ) {
-            // Add meta query to filter by location
-            $query_args['meta_query'][] = array(
-                'key'     => 'assigned_location',
-                'value'   => $location_id,
-                'compare' => '=',
-            );
-        }
+    // Debug data only for editors when debug enabled
+    if ( defined( 'ACF_LS_DEBUG' ) && ACF_LS_DEBUG && current_user_can( 'edit_posts' ) && ! empty( $debug_data ) ) {
+        $output .= sprintf(
+            '<details class="acf-sms-debug"><summary>Debug Info</summary><pre>%s</pre></details>',
+            esc_html( print_r( $debug_data, true ) )
+        );
     }
     
-    return $query_args;
+    return $output;
 }
 ```
 
-### CSS Guidelines
-- Use BEM-style naming: `.acf-ls-communities`, `.acf-ls-communities__item`
-- Mobile-first responsive design
-- Minimal specificity (avoid `!important`)
-- Include vendor prefixes for better browser support
-
-### Example CSS for Horizontal List
-```css
-.acf-ls-communities {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.acf-ls-communities__item {
-    display: inline-flex;
-    align-items: center;
-    font-size: 1rem;
-}
-
-.acf-ls-communities__item::before {
-    content: '🏠';
-    margin-right: 0.5rem;
-}
-```
-
-## Feature Implementation Details
-
-### 1. Community List Shortcode
-
-#### Shortcode Syntax
-```
-[location_communities]
-[location_communities location_id="123"]
-[location_communities limit="5" class="custom-class"]
-```
-
-#### Attributes
-- `location_id` (int): Post ID of location (default: current post)
-- `limit` (int): Max communities to display (default: 0 = all)
-- `class` (string): Additional CSS class
-- `separator` (string): Custom separator (advanced, default: internal list format)
-
-#### Expected Output
-```html
-<ul class="acf-ls-communities custom-class">
-    <li class="acf-ls-communities__item">🏠 Brooks Harbor</li>
-    <li class="acf-ls-communities__item">🏠 Eagle Run</li>
-    <li class="acf-ls-communities__item">🏠 Shadow Wood</li>
-</ul>
-```
-
-#### Data Processing
-1. Retrieve `surrounding_community_list` from ACF
-2. Split by comma
-3. Trim whitespace from each item
-4. Remove empty items
-5. Apply limit if specified
-6. Build HTML output
-
-### 2. Elementor Query Filter
-
-#### Integration Points
-- Hook into `elementor/query/query_args` filter
-- Add controls via `elementor/element/before_section_end`
-- Support Elementor Pro's Loop Grid and Loop Carousel
-
-#### Controls to Add
-1. **Toggle Control:** "Filter by Service Location"
-2. **Select Control:** Location dropdown (populated dynamically)
-3. **Multi-Select Control:** "Select Locations" (for OR filtering)
-
-#### Query Modification Logic
+### Logging Pattern (v1.1.0+)
 ```php
-// If filtering by location is enabled
-if ( $filter_enabled && ! empty( $location_ids ) ) {
-    // For ACF relationship fields
-    $query_args['meta_query'][] = array(
-        'key'     => 'assigned_location', // Adjust field name
-        'value'   => '"' . $location_id . '"',
-        'compare' => 'LIKE',
-    );
-}
+ACF_Location_Shortcodes::log(
+    'Field validation failed',
+    array(
+        'field' => $field_name,
+        'post_id' => $post_id,
+        'available_fields' => $available,
+    ),
+    'warning' // or 'info', 'error'
+);
 ```
 
-## Common Tasks for Copilot
+### Caching Pattern
+```php
+$cache_key = 'communities_' . $post_id;
+$cached = wp_cache_get( $cache_key, 'acf_sms_locations' );
 
-### When Creating Functions
-- Always check dependencies (ACF, Elementor)
-- Add PHPDoc comments with `@param`, `@return`, `@since` tags
-- Include error handling and early returns
-- Use WordPress coding standards
+if ( false !== $cached ) {
+    ACF_Location_Shortcodes::log( 'Cache hit', array( 'key' => $cache_key ), 'info' );
+    return $cached;
+}
 
-### When Creating Shortcodes
-- Use `shortcode_atts()` for attribute parsing
-- Sanitize all input
-- Escape all output
-- Return string (never echo directly)
-- Use output buffering for complex HTML
+// Expensive operation
+$data = $this->get_expensive_data( $post_id );
 
-### When Adding Elementor Integration
-- Check if Elementor is active
-- Use Elementor's control system properly
-- Test with both Free and Pro versions
-- Add controls in appropriate sections
+wp_cache_set( $cache_key, $data, 'acf_sms_locations', HOUR_IN_SECONDS );
+ACF_Location_Shortcodes::log( 'Cache miss', array( 'key' => $cache_key ), 'info' );
 
-### When Writing CSS
-- Enqueue only when needed
-- Use plugin version for cache busting
-- Include responsive breakpoints
-- Test on multiple themes
+return $data;
+```
+
+## Version Management
+
+### CRITICAL: Version Synchronization Rules
+
+When bumping versions, update in this exact order:
+
+1. **CHANGELOG.md** - Add new version section FIRST
+   ```markdown
+   ## [2.0.0] - 2025-10-28
+   ### Added
+   - Complete post type structure included
+   ### Changed
+   - Rebranded to ACF Service Management Suite
+   ```
+
+2. **acf-service-management-suite.php** - Plugin header + constant
+   ```php
+   * Version: 2.0.0
+   define( 'ACF_LS_VERSION', '2.0.0' );
+   ```
+
+3. **README.md** - Badge + Credits section
+   ```markdown
+   [![Version](https://img.shields.io/badge/Version-2.0.0-green)]
+   **Version:** 2.0.0
+   **Last Updated:** October 28, 2025
+   ```
+
+4. **copilot-instructions.md** - Current Version field
+   ```markdown
+   **Current Version:** 2.0.0
+   ```
+
+**Pre-Release Checklist:**
+- [ ] All 4 files have matching version numbers
+- [ ] CHANGELOG has complete list of changes
+- [ ] All dates are current date
+- [ ] Git tag created: `git tag -a v2.0.0 -m "Version 2.0.0"`
+- [ ] README credits updated with correct version
+
+**Semantic Versioning:**
+- **MAJOR** (X.0.0) - Breaking changes, renamed plugin, architecture overhaul
+- **MINOR** (2.X.0) - New features, new shortcodes, backwards compatible
+- **PATCH** (2.0.X) - Bug fixes, security patches, performance tweaks
+
+## Development Workflow
+
+### Before Writing Code
+1. Check if ACF function exists: `if ( ! function_exists( 'get_field' ) )`
+2. Validate post ID and post type
+3. Check field exists before calling `get_field()`
+4. Plan error messages - what will user see?
+5. Consider debug output - what helps troubleshooting?
+
+### During Development
+1. Follow WPCS (WordPress Coding Standards)
+2. Add PHPDoc comments to all methods
+3. Use i18n functions: `__()`, `_e()`, `esc_html__()`, etc.
+4. Test with ACF Free AND Pro
+5. Test with Elementor Free AND Pro
+6. Test on mobile devices
+
+### After Code Complete
+1. Run PHP syntax check: `php -l filename.php`
+2. Check for errors: WP_DEBUG enabled
+3. Test all shortcodes with various attributes
+4. Test Elementor integration with real data
+5. Verify caching works correctly
+6. Update CHANGELOG.md
+7. Bump version numbers (all 4 files)
+
+## Documentation Standards
+
+### README.md Structure (PRIMARY DOCS)
+```markdown
+# Plugin Name
+Badges, brief description
+
+## Why Use This Plugin?
+Bullet points only
+
+## Features
+Concise feature list with code examples
+
+## Requirements
+Min/recommended versions
+
+## Installation
+3 methods max (WordPress Admin, FTP, Git)
+
+## Quick Start Guide
+5 steps to first working shortcode
+
+## Documentation
+Shortcode reference tables inline (no separate files)
+
+## Usage Examples
+Real-world scenarios with code
+
+## ACF Field Schema
+Complete field reference + import instructions
+
+## Troubleshooting
+Common issues with solutions (no fluff)
+
+## Support
+GitHub issues link only
+
+## License
+Full GPL v2 text
+
+## Credits
+Author, company, version, date
+```
+
+### What NOT to Include in Docs
+- ❌ Redundant "About" or "Overview" sections
+- ❌ Separate USAGE.md file (integrate into README)
+- ❌ Separate PLAN.md file (architecture goes in DEVELOP.md)
+- ❌ ROADMAP.md (future features go in GitHub Issues/Projects)
+- ❌ Multiple "Getting Started" sections
+- ❌ Excessive screenshots (code examples better)
+- ❌ Marketing copy or sales language
+- ❌ Repeated content across multiple files
+
+### DEVELOP.md Structure (DEVELOPERS ONLY)
+```markdown
+# Development Guide
+- Local environment setup
+- Plugin architecture
+- Coding standards
+- Extension patterns (how to add shortcodes, fields, integrations)
+- Testing procedures
+- Contribution workflow
+- Release process
+```
+
+### CHANGELOG.md Structure (VERSION HISTORY ONLY)
+```markdown
+# Changelog
+## [Unreleased]
+## [2.0.0] - 2025-10-28
+### Added
+### Changed
+### Fixed
+### Security
+```
+
+## CSS Standards
+
+### BEM Methodology
+```css
+/* Block */
+.acf-sms-communities { }
+
+/* Element */
+.acf-sms-communities__item { }
+.acf-sms-communities__emoji { }
+.acf-sms-communities__text { }
+
+/* Modifier */
+.acf-sms-communities--vertical { }
+.acf-sms-communities--grid { }
+```
+
+### Minimal CSS Philosophy
+- Ship only essential styles
+- Use flexbox/grid for layouts
+- Mobile-first responsive
+- No `!important` unless absolutely necessary
+- Theme compatibility - use specificity wisely
+
+## Security Checklist
+
+### Input Validation
+- [ ] All `$_GET`, `$_POST`, `$_REQUEST` sanitized
+- [ ] ACF field data sanitized (it comes from DB, could be tampered)
+- [ ] Shortcode attributes parsed with `shortcode_atts()`
+- [ ] Post IDs validated with `absint()` and post type check
+
+### Output Escaping
+- [ ] All echo/print statements escaped
+- [ ] Use `esc_html()` for text
+- [ ] Use `esc_attr()` for attributes
+- [ ] Use `esc_url()` for URLs
+- [ ] Use `wp_kses_post()` for HTML content
+
+### Capability Checks
+- [ ] Admin actions check `manage_options` or similar
+- [ ] Plugin install checks `install_plugins` + `activate_plugins`
+- [ ] Debug output checks `edit_posts` minimum
+
+### Nonce Verification
+- [ ] All forms include nonce field
+- [ ] AJAX requests verify nonce
+- [ ] Use `wp_create_nonce()` and `check_ajax_referer()`
+
+## Common Mistakes to Avoid
+
+1. **Don't echo in shortcodes** - Always return string
+2. **Don't assume ACF exists** - Check `function_exists('get_field')`
+3. **Don't skip validation** - Verify post type before using post ID
+4. **Don't hardcode IDs** - Make configurable via attributes
+5. **Don't create separate doc files** - Consolidate into README/DEVELOP
+6. **Don't write vague errors** - Be specific and actionable
+7. **Don't forget mobile** - Test responsive layouts
+8. **Don't skip version sync** - Update all 4 files
 
 ## Testing Checklist
 
-### Before Committing Code
-- [ ] No PHP errors or warnings
-- [ ] No JavaScript console errors
-- [ ] Code follows WordPress standards
-- [ ] All strings are translatable
-- [ ] Functions are documented
-- [ ] Edge cases handled (empty data, missing fields)
-- [ ] Sanitized input, escaped output
-- [ ] Tested with ACF Free and Pro
-- [ ] Tested with Elementor Free and Pro
-- [ ] Mobile responsive
+### Manual Testing
+- [ ] Install on fresh WordPress install
+- [ ] Import ACF fields from JSON
+- [ ] Create test locations (physical + service areas)
+- [ ] Test all shortcodes with various attributes
+- [ ] Test Elementor query filtering
+- [ ] Test with WP_DEBUG enabled (no errors)
+- [ ] Test on mobile device/responsive view
+- [ ] Test with ACF Free and Pro
+- [ ] Test with Elementor Free and Pro
 
-## Common Pitfalls to Avoid
+### Error Testing
+- [ ] Invalid location ID shows clear error
+- [ ] Missing ACF field shows helpful error
+- [ ] Empty data shows appropriate message
+- [ ] Debug mode shows collapsible debug info
+- [ ] Non-editors don't see debug info
 
-1. **Don't assume ACF is active:** Always check `function_exists('get_field')`
-2. **Don't echo in shortcodes:** Always return output
-3. **Don't forget i18n:** Wrap strings in `__()` or `_e()`
-4. **Don't use generic names:** Always prefix functions/classes
-5. **Don't hardcode paths:** Use `plugin_dir_path()` and `plugin_dir_url()`
-6. **Don't forget mobile:** Test responsive layouts
-7. **Don't skip sanitization:** Never trust user input or database content
+## AI Assistant Behavior
 
-## Debug Mode
+### When Asked to "Add a Feature"
+1. Determine if it fits plugin scope
+2. Plan class/method structure
+3. Write code following all standards above
+4. Add error handling with actionable messages
+5. Add logging if debug-worthy
+6. Update CHANGELOG.md
+7. Provide usage example
+8. NO separate planning doc - explain inline
 
-### Enable Debug Output
-```php
-// In wp-config.php
-define( 'WP_DEBUG', true );
-define( 'WP_DEBUG_LOG', true );
-define( 'WP_DEBUG_DISPLAY', false );
-
-// In plugin code
-if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-    error_log( 'ACF Location Shortcodes: ' . print_r( $data, true ) );
-}
-```
-
-## Version Control
-
-### Version Management Guidelines
-
-**CRITICAL: All version numbers and documentation must stay synchronized**
-
-When updating versions, you MUST update these files in this order:
-
-1. **CHANGELOG.md** - Add new version section first
-   - Document all changes under appropriate categories (Added, Changed, Fixed, etc.)
-   - Use format: `## [X.Y.Z] - YYYY-MM-DD`
-   - Be specific and clear about what changed
-
-2. **acf-location-shortcodes.php** - Update plugin header
-   - `Version: X.Y.Z` in plugin header comment
-   - `ACF_LS_VERSION` constant
-   - Must match CHANGELOG.md version exactly
-
-3. **PLAN.md** - Update version and status
-   - Update "Version:" field at bottom
-   - Update "Status:" field
-   - Update "Last Updated:" date
-
-4. **copilot-instructions.md** - Update current version
-   - Update "Current Version:" field
-   - Update "Last Updated:" date
-
-5. **README.md** - Update version references
-   - Update version in credits section
-   - Update "Last Updated:" date
-
-**Version Number Format:**
-- Use semantic versioning: `MAJOR.MINOR.PATCH`
-- MAJOR: Breaking changes
-- MINOR: New features, backwards compatible
-- PATCH: Bug fixes, backwards compatible
-
-**Examples:**
-- `1.0.0` → `1.1.0` (added debugging features)
-- `1.1.0` → `1.1.1` (bug fix)
-- `1.1.1` → `2.0.0` (breaking change)
-
-**Pre-Release Checklist:**
-- [ ] CHANGELOG.md has new version section with all changes
-- [ ] Plugin file version matches CHANGELOG
-- [ ] ACF_LS_VERSION constant updated
-- [ ] PLAN.md version updated
-- [ ] copilot-instructions.md version updated
-- [ ] README.md version updated
-- [ ] All dates match (use current date)
-- [ ] Git tag created: `git tag -a v1.1.0 -m "Version 1.1.0"`
-
-### Commit Message Format
-```
-feat: Add community list shortcode
-fix: Resolve Elementor query filter issue
-docs: Update README with examples
-style: Format code per WPCS
-refactor: Optimize ACF data retrieval
-test: Add unit tests for shortcode handler
-chore: Bump version to 1.1.0
-```
-
-## Resources
-
-### Documentation Links
-- [WordPress Plugin Handbook](https://developer.wordpress.org/plugins/)
-- [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/)
-- [ACF Documentation](https://www.advancedcustomfields.com/resources/)
-- [Elementor Developers](https://developers.elementor.com/)
-- [Shortcode API](https://developer.wordpress.org/apis/shortcode/)
-
-### ACF Functions to Use
-- `get_field()` - Get field value
-- `have_rows()` - Check repeater/group fields
-- `get_field_object()` - Get field metadata
-- `acf_add_options_page()` - Add settings page (if needed)
-
-### WordPress Functions to Use
-- `get_posts()` - Query posts
-- `get_post_meta()` - Get post metadata
-- `wp_enqueue_style()` - Enqueue CSS
-- `wp_enqueue_script()` - Enqueue JavaScript
-- `add_shortcode()` - Register shortcode
-- `add_filter()` - Register filter
-- `add_action()` - Register action
-
-## AI Assistant Behavior Guidelines
-
-### When I Ask You To...
-
-#### "Create a shortcode"
-1. Create the handler function
-2. Register with `add_shortcode()`
-3. Parse attributes with defaults
-4. Sanitize all input
-5. Get ACF data with fallbacks
-6. Build HTML output
-7. Return (not echo)
-8. Add CSS if needed
-
-#### "Add Elementor integration"
-1. Check Elementor is active
-2. Hook into query filters
-3. Add controls to widgets
-4. Modify query args
-5. Test with Loop Grid/Carousel
-6. Handle edge cases
-
-#### "Fix a bug"
-1. Ask for error details
-2. Review relevant code
+### When Asked to "Fix a Bug"
+1. Ask for error details and context
+2. Review relevant code section
 3. Identify root cause
-4. Propose fix
-5. Implement fix
-6. Test thoroughly
+4. Implement fix with tests
+5. Add entry to CHANGELOG.md (### Fixed)
+6. Explain what was wrong and how it's fixed
 
-#### "Optimize performance"
-1. Identify bottlenecks
-2. Add caching where appropriate
-3. Minimize database queries
-4. Use transients for expensive operations
-5. Lazy load assets
+### When Asked to "Update Documentation"
+1. Determine which file (README, DEVELOP, or CHANGELOG)
+2. Update inline - no new files
+3. Keep language concise and technical
+4. Remove fluff/marketing language
+5. Ensure version numbers match across files
 
-## Current Development Phase
-**Phase:** v1.1.0 Implementation In Progress
-**Current Version:** 1.1.0
-**Next Steps:** Complete debugging improvements and one-click ACF install implementation
-
-### Active Planning Documents
-- `DEBUGGING-IMPROVEMENT-PLAN.md` - Comprehensive debugging and UX improvements for v1.1.0
-- `PLAN.md` - Overall project roadmap and technical architecture
-
-### Version Management
-**Current Plugin Version:** 1.1.0
-
-When making changes:
-- Update version in `acf-location-shortcodes.php` header comment
-- Update `ACF_LS_VERSION` constant in main plugin file
-- Update version in `copilot-instructions.md` (this file)
-- Update CHANGELOG.md with changes
-- Update "Last Updated" dates in documentation
-
-**Version Scheme:**
-- **Major (X.0.0)**: Breaking changes, major architecture changes
-- **Minor (1.X.0)**: New features, enhancements, no breaking changes
-- **Patch (1.1.X)**: Bug fixes, minor improvements only
-
-## Questions to Ask Before Coding
-
-1. Does this require ACF to function?
-2. Does this require Elementor to function?
-3. What happens if the data is empty?
-4. What happens if the post doesn't exist?
-5. Is this properly escaped for output?
-6. Is this properly sanitized for input?
-7. Is this translatable?
-8. Is this performant with 100+ locations?
-9. **NEW:** What error message will the user see if this fails?
-10. **NEW:** Is debug information provided for troubleshooting?
-11. **NEW:** Can the user fix this issue themselves based on the error?
+### When Asked to "Create Documentation"
+1. **STOP** - Ask which existing file to update
+2. Consolidate into README.md or DEVELOP.md
+3. NO new .md files without explicit approval
+4. Inline code documentation via PHPDoc only
 
 ---
 
-## Debugging & Error Handling Guidelines (v1.1.0+)
-
-### Error Message Standards
-
-#### Always Include:
-1. **What went wrong** - Clear description of the error
-2. **Why it happened** - Context about the cause
-3. **How to fix it** - Actionable next steps
-4. **What was provided** - Show user input that caused the error
-
-#### Error Message Template
-```php
-// Good Error Message
-return $this->render_error(
-    sprintf(
-        __( 'Post ID %d is not a location post. Found post type: %s. Please use a valid location post ID.', 'acf-location-shortcodes' ),
-        $location_id,
-        get_post_type( $location_id )
-    ),
-    array(
-        'location_id' => $location_id,
-        'post_type' => get_post_type( $location_id ),
-        'post_title' => get_the_title( $location_id ),
-        'edit_link' => get_edit_post_link( $location_id ),
-    )
-);
-
-// Bad Error Message (Don't do this)
-return $this->render_error( __( 'Invalid location ID.', 'acf-location-shortcodes' ) );
-```
-
-### Debug Mode Implementation
-
-#### When to Add Debug Output
-- Field validation failures
-- Empty or missing data
-- Query modifications (Elementor)
-- Cache operations
-- ACF field existence checks
-- Post type validation
-
-#### Debug Output Pattern
-```php
-// Check if debug mode is enabled
-if ( defined( 'ACF_LS_DEBUG' ) && ACF_LS_DEBUG ) {
-    // Collect debug data
-    $debug_data = array(
-        'field_name' => $field_name,
-        'post_id' => $post_id,
-        'available_fields' => $this->get_field_names( $post_id ),
-    );
-    
-    // Include in error
-    return $this->render_error( $message, $debug_data );
-}
-```
-
-### Logging Standards
-
-#### When to Log
-- Cache hits and misses
-- Field validation results
-- Query filter applications
-- Plugin installation attempts
-- Configuration validation
-
-#### Logging Pattern
-```php
-// Use static log method
-ACF_Location_Shortcodes::log(
-    'Communities retrieved from cache',
-    array(
-        'post_id' => $post_id,
-        'count' => count( $cached ),
-    ),
-    'info' // or 'warning', 'error'
-);
-```
-
-#### Log Levels
-- **info** - Normal operations, cache hits, successful validations
-- **warning** - Potential issues, missing optional data, fallbacks used
-- **error** - Failures, missing required data, invalid configurations
-
-### Field Validation Pattern
-
-#### Always Validate Fields Before Use
-```php
-// Check if field exists first
-if ( ! $this->acf_helpers->field_exists( 'surrounding_community_list', $location_id ) ) {
-    return $this->render_error(
-        sprintf(
-            __( 'ACF field "surrounding_community_list" not found on location "%s" (ID: %d).', 'acf-location-shortcodes' ),
-            get_the_title( $location_id ),
-            $location_id
-        ),
-        array(
-            'location_id' => $location_id,
-            'field_name' => 'surrounding_community_list',
-            'available_fields' => $this->acf_helpers->get_field_names( $location_id ),
-        )
-    );
-}
-
-// Then get the value
-$communities = get_field( 'surrounding_community_list', $location_id );
-```
-
-### Admin Notice Guidelines
-
-#### Notice Types
-1. **Error** (red) - Critical issues preventing functionality
-2. **Warning** (yellow) - Configuration issues or missing optional features
-3. **Success** (green) - Successful operations (ACF installed, setup complete)
-4. **Info** (blue) - General information, tips, guidance
-
-#### Notice Display Logic
-```php
-// Only show to users who can fix the issue
-if ( ! current_user_can( 'manage_options' ) ) {
-    return;
-}
-
-// Use transients to avoid repeated checks
-$notice_dismissed = get_transient( 'acf_ls_notice_dismissed_field_check' );
-if ( $notice_dismissed ) {
-    return;
-}
-
-// Make dismissible for non-critical notices
-// Store dismissal in user meta or transient
-```
-
-### One-Click Install Implementation
-
-#### Security Requirements
-```php
-// Verify nonce
-check_ajax_referer( 'acf_ls_install_acf', 'nonce' );
-
-// Check capabilities
-if ( ! current_user_can( 'install_plugins' ) || ! current_user_can( 'activate_plugins' ) ) {
-    wp_send_json_error( __( 'Insufficient permissions', 'acf-location-shortcodes' ) );
-}
-
-// Sanitize input (if any)
-$action = sanitize_key( $_POST['action'] );
-```
-
-#### Installation Flow
-```php
-// Include WordPress plugin installation libraries
-if ( ! function_exists( 'plugins_api' ) ) {
-    require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
-}
-if ( ! class_exists( 'WP_Upgrader' ) ) {
-    require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
-}
-
-// Use Plugin_Upgrader to install
-// Activate plugin
-// Verify installation
-// Provide feedback
-```
-
-### Error Recovery Suggestions
-
-#### Suggest Similar Field Names
-```php
-// If field doesn't exist, suggest alternatives
-$available_fields = $this->get_field_names( $post_id );
-$suggestions = $this->find_similar_fields( $field_name, $available_fields );
-
-if ( ! empty( $suggestions ) ) {
-    $error .= ' ' . sprintf(
-        __( 'Did you mean: %s?', 'acf-location-shortcodes' ),
-        implode( ', ', $suggestions )
-    );
-}
-```
-
-#### Provide Edit Links
-```php
-// Include links to fix the issue
-$debug_data['actions'] = array(
-    'edit_post' => get_edit_post_link( $post_id ),
-    'acf_fields' => admin_url( 'edit.php?post_type=acf-field-group' ),
-    'create_location' => admin_url( 'post-new.php?post_type=location' ),
-);
-```
-
----
-
-**Last Updated:** October 28, 2025
-**Current Version:** 1.1.0 (Phase 1 & 2 complete - debugging infrastructure and enhanced errors)
-**Primary Developer:** Ryan Reiffenberger
+**Last Updated:** October 28, 2025  
+**Current Version:** 2.0.0  
+**Primary Developer:** Ryan T. M. Reiffenberger  
+**Company:** Falls Technology Group, LLC

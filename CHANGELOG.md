@@ -1,45 +1,55 @@
 # Changelog
 
-All notable changes to the ACF Location Shortcodes plugin will be documented in this file.
+All notable changes to the ACF Service Management Suite plugin will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2025-10-28 (In Development)
+## [2.0.0] - 2025-10-28
 
 ### Added
-- **Debug Mode:** New `ACF_LS_DEBUG` constant for verbose error output
-- **Enhanced Error Messages:** Contextual, actionable error messages with debug data
-- **Field Validation:** New helper methods to check ACF field existence
-- **Logging System:** Static `log()` method for debugging operations
-- **One-Click ACF Install:** Admin notice with button to install ACF from WordPress.org
-- **Admin Notices:** Configuration validation and setup guidance
-- **Field Suggestions:** Suggest similar field names when fields don't exist
-- **Elementor Debugging:** Query modification logging and validation
+- **Complete Post Type Structure** - Plugin now includes pre-configured ACF field groups
+  - Service Locations post type (`location`) with 11 custom fields
+  - Team Members post type (`team-member`) with 4 custom fields
+  - Team Member Types taxonomy for categorization
+  - Ready-to-import ACF JSON export file (`acf-export-2025-10-28.json`)
+- **[location_address] Shortcode** - Display physical address with automatic parent location lookup
+- **Enhanced Documentation** - Consolidated all usage documentation into README.md
+  - Complete shortcode reference with attribute tables
+  - Real-world usage examples
+  - ACF field schema documentation
+  - Troubleshooting guide
+  - No more separate USAGE.md file
 
-### Enhanced
-- `render_error()` method now supports collapsible debug data
-- All shortcode error messages now include context and fix suggestions
-- ACF helper methods return structured data with success/error states
-- Admin notices are dismissible and use transient storage
+### Changed
+- **Plugin Rebranded** - "ACF Location Shortcodes" → "ACF Service Management Suite"
+  - Reflects expanded scope as complete service business solution
+  - Better describes location + team member management capabilities
+- **Text Domain** - Changed from `acf-location-shortcodes` to `acf-sms`
+- **Plugin URI** - Updated to https://github.com/ReclaimerGold/acf-service-management-suite
+- **Author Credits** - Falls Technology Group, LLC (Ryan T. M. Reiffenberger)
+- **Documentation Cleanup** - Removed redundant markdown files
+  - Deleted: USAGE.md (merged into README.md)
+  - Deleted: PLAN.md (architecture in DEVELOP.md)
+  - Deleted: DEBUGGING-IMPROVEMENT-PLAN.md (completed features)
+  - Deleted: PLANNING-SUMMARY.md (no longer needed)
+  - Retained: README.md (primary docs), DEVELOP.md (developer guide), CHANGELOG.md (this file)
+- **Copilot Instructions** - Complete rewrite focusing on modern WordPress plugin development standards
+  - No fluff documentation policy
+  - Security-first coding patterns
+  - Performance optimization guidelines
+  - Clear version management rules
 
-### Security
-- One-click install includes nonce verification and capability checks
-- All error output respects user capabilities
-- Debug mode is opt-in and respects WP_DEBUG
-
-### Documentation
-- Added `DEBUGGING-IMPROVEMENT-PLAN.md` with complete technical specs
-- Updated `copilot-instructions.md` with debugging guidelines
-- Enhanced `PLAN.md` with v1.1.0 features
-- Added troubleshooting section to documentation (planned)
-
-# Changelog
-
-All notable changes to the ACF Location Shortcodes plugin will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Improved
+- **README.md** - Now comprehensive primary documentation source
+  - Installation methods (WordPress Admin, FTP, Git)
+  - Quick start guide with ACF field import instructions
+  - Complete shortcode reference (all 4 shortcodes documented)
+  - Real-world usage examples
+  - Complete ACF field schema with import guide
+  - Troubleshooting section
+- **License Information** - Full GPL v2 license text in plugin description
+- **Support Links** - GitHub repository as official support channel
 
 ## [1.1.0] - 2025-10-28
 
