@@ -1,8 +1,12 @@
-# Development Guide - ACF Location Shortcodes
+# Development Guide
 
-This guide will help you extend, customize, and contribute to the ACF Location Shortcodes plugin.
+> Complete guide for extending, customizing, and contributing to **ACF Service Management Suite**
 
-**Version:** 1.1.0  
+[![WordPress Coding Standards](https://img.shields.io/badge/WPCS-Compliant-green?logo=wordpress)](https://developer.wordpress.org/coding-standards/)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow?logo=git)](https://conventionalcommits.org)
+[![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-purple?logo=php)](https://php.net)
+
+**Version:** 2.0.0  
 **Last Updated:** October 28, 2025
 
 ---

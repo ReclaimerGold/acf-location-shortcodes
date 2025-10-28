@@ -1,12 +1,34 @@
-````markdown
 # ACF Service Management Suite
 
-A comprehensive WordPress plugin for service-based businesses managing multiple locations, team members, and service areas. Built on Advanced Custom Fields (ACF), this plugin provides powerful shortcodes, Elementor integration, and a complete post type structure for location and team management.
+> A comprehensive WordPress plugin for service-based businesses managing multiple locations, team members, and service areas.
 
-[![WordPress Version](https://img.shields.io/badge/WordPress-5.8%2B-blue)](https://wordpress.org)
-[![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-purple)](https://php.net)
+Built on Advanced Custom Fields (ACF), this plugin provides powerful shortcodes, Elementor integration, and a complete post type structure for location and team management.
+
+[![WordPress Version](https://img.shields.io/badge/WordPress-5.8%2B-blue?logo=wordpress)](https://wordpress.org)
+[![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-purple?logo=php)](https://php.net)
 [![Version](https://img.shields.io/badge/Version-2.0.0-green)](CHANGELOG.md)
-[![License](https://img.shields.io/badge/License-GPLv2-red)](https://github.com/ReclaimerGold/acf-service-management-suite/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-GPLv2-red)](LICENSE)
+[![GitHub Issues](https://img.shields.io/github/issues/ReclaimerGold/acf-service-management-suite)](https://github.com/ReclaimerGold/acf-service-management-suite/issues)
+
+---
+
+## Table of Contents
+
+- [Why Use This Plugin?](#why-use-this-plugin)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start Guide](#quick-start-guide)
+- [Shortcode Reference](#shortcode-reference)
+- [Usage Examples](#usage-examples)
+- [ACF Field Schema](#acf-field-schema)
+- [Troubleshooting](#troubleshooting)
+- [Performance](#performance)
+- [Contributing](#contributing)
+- [Support](#support)
+- [License](#license)
+
+---
 
 ## Why Use This Plugin?
 
@@ -122,35 +144,52 @@ Advanced filtering for Elementor Loop Grids, Loop Carousels, and Posts widgets.
 
 ## Installation
 
-### Method 1: WordPress Admin (Recommended)
+<details>
+<summary><strong>📦 Method 1: WordPress Admin (Recommended)</strong></summary>
+
+<br>
 
 1. Download the latest release as a ZIP file
 2. Go to **Plugins > Add New > Upload Plugin**
 3. Choose the ZIP file and click **Install Now**
 4. Click **Activate Plugin**
 
-### Method 2: Manual FTP Upload
+</details>
+
+<details>
+<summary><strong>📤 Method 2: Manual FTP Upload</strong></summary>
+
+<br>
 
 1. Download and extract the plugin ZIP file
-2. Upload the `acf-location-shortcodes` folder to `/wp-content/plugins/`
+2. Upload the `acf-service-management-suite` folder to `/wp-content/plugins/`
 3. Go to **Plugins** in WordPress admin
-4. Find and activate "ACF Location Shortcodes"
+4. Find and activate "ACF Service Management Suite"
 
-### Method 3: Git Clone (For Developers)
+</details>
+
+<details>
+<summary><strong>💻 Method 3: Git Clone (For Developers)</strong></summary>
+
+<br>
 
 ```bash
 cd wp-content/plugins/
-git clone https://github.com/rreiffenberger/acf-location-shortcodes.git
+git clone https://github.com/ReclaimerGold/acf-service-management-suite.git
 ```
 
 Then activate via WordPress admin or WP-CLI:
 ```bash
-wp plugin activate acf-location-shortcodes
+wp plugin activate acf-service-management-suite
 ```
+
+</details>
+
+---
 
 ## Quick Start Guide
 
-### Step 1: Install Dependencies
+### 🔌 Step 1: Install Dependencies
 
 The plugin requires **Advanced Custom Fields** to function. If ACF is not installed:
 
@@ -158,7 +197,7 @@ The plugin requires **Advanced Custom Fields** to function. If ACF is not instal
 2. Search for "Advanced Custom Fields"
 3. Install and activate ACF Free (or ACF Pro if you have it)
 
-### Step 2: Import ACF Field Groups
+### 📥 Step 2: Import ACF Field Groups
 
 This plugin includes pre-configured field groups ready to import:
 
@@ -168,33 +207,33 @@ This plugin includes pre-configured field groups ready to import:
 4. Click **Import JSON**
 
 This will create:
-- **Location Details** field group (11 fields for service locations)
-- **Team Member Details** field group (4 fields for team members)
-- **Service Locations** post type
-- **Team Members** post type
-- **Team Member Types** taxonomy
+- ✅ **Location Details** field group (11 fields for service locations)
+- ✅ **Team Member Details** field group (4 fields for team members)
+- ✅ **Service Locations** post type
+- ✅ **Team Members** post type
+- ✅ **Team Member Types** taxonomy
 
-### Step 3: Create Your First Location
+### 📍 Step 3: Create Your First Location
 
 1. Go to **Service Locations > Add New**
-2. Title: Enter city name (e.g., "Sioux Falls")
-3. **Service Area Shorthand:** "Sioux Falls, SD"
+2. **Title:** Enter city name (e.g., "Sioux Falls")
+3. **Service Area Shorthand:** `Sioux Falls, SD`
 4. **Surrounding Community List:** `Brooks Harbor, Eagle Run, Shadow Wood, Charleswood`
 5. **Physical Address:** (Enter if physical location, leave empty if service area only)
 6. Add other fields as needed
-7. Publish
+7. **Publish**
 
-### Step 4: Use Shortcodes
+### 🚀 Step 4: Use Shortcodes
 
 Add to any page or post:
 
-```
+```shortcode
 [location_communities location_id="123"]
 ```
 
 Or on the location post itself:
 
-```
+```shortcode
 [location_communities]
 [location_info field="service_area_shorthand"]
 [location_list location_specific="true"]
@@ -203,7 +242,7 @@ Or on the location post itself:
 **Expected Output:**
 > 🏠 Brooks Harbor  🏠 Eagle Run  🏠 Shadow Wood  🏠 Charleswood
 
-### Step 5: Enable Debug Mode (Optional)
+### 🐛 Step 5: Enable Debug Mode (Optional)
 
 For troubleshooting, add to your `wp-config.php`:
 
@@ -213,15 +252,13 @@ define( 'ACF_LS_DEBUG', true );
 
 This enables verbose error messages with helpful debugging information (only visible to users with edit permissions).
 
-## Documentation
+---
 
-### Complete Usage Guide
+## Shortcode Reference
 
-This README contains everything you need to get started. For detailed information on every shortcode and feature:
+### `[location_communities]`
 
-#### Shortcode Reference
-
-**[location_communities]** - Display surrounding communities
+Display surrounding communities as a horizontal list.
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -230,7 +267,16 @@ This README contains everything you need to get started. For detailed informatio
 | `class` | string | '' | Additional CSS class |
 | `show_emoji` | string | 'yes' | Show house emoji ('yes'/'no') |
 
-**[location_info]** - Display any ACF field
+**Example:**
+```shortcode
+[location_communities location_id="123" limit="5" show_emoji="yes"]
+```
+
+---
+
+### `[location_info]`
+
+Display any ACF field from a location post.
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -238,7 +284,16 @@ This README contains everything you need to get started. For detailed informatio
 | `field` | string | (required) | ACF field name |
 | `default` | string | '' | Fallback if field is empty |
 
-**[location_list]** - Display location directory
+**Example:**
+```shortcode
+[location_info field="phone_number" default="Contact us"]
+```
+
+---
+
+### `[location_list]`
+
+Display a directory of locations with filtering.
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -251,18 +306,31 @@ This README contains everything you need to get started. For detailed informatio
 | `class` | string | '' | Additional CSS class |
 | `show_emoji` | string | 'yes' | Show map pin emoji |
 
-**[location_address]** - Get physical address
+**Example:**
+```shortcode
+[location_list type="physical" orderby="title" order="ASC"]
+```
+
+---
+
+### `[location_address]`
+
+Get the physical address for a location (or its parent location).
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `location_id` | int | Current post ID | Location post to display |
 
-Returns format: `Site Title, Address`
+**Returns format:** `Site Title, Address`
 
-#### Developer Documentation
-- **[DEVELOP.md](DEVELOP.md)** - Development guide and extension instructions
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
-- **[copilot-instructions.md](copilot-instructions.md)** - AI assistant development guidelines
+**Example:**
+```shortcode
+[location_address location_id="456"]
+```
+
+> 📖 **For more documentation:** See [DEVELOP.md](DEVELOP.md) for extension guide and [CHANGELOG.md](CHANGELOG.md) for version history
+
+---
 
 ## Usage Examples
 
