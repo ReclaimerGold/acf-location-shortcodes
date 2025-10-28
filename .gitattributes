@@ -1,0 +1,14 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Exclude files from export (git archive / releases)
+/.github export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/workspace export-ignore
+/DEVELOP.md export-ignore
+/copilot-instructions.md export-ignore
+*.log export-ignore
+*.tmp export-ignore
+*.old export-ignore
+*.bak export-ignore

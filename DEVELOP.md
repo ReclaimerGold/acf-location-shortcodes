@@ -931,6 +931,53 @@ Install [Query Monitor](https://wordpress.org/plugins/query-monitor/) plugin to 
 
 ## Testing
 
+### Automated Testing (GitHub Actions)
+
+The plugin uses GitHub Actions for automated testing on every commit and pull request:
+
+#### Test Workflow (`.github/workflows/test.yml`)
+
+Runs automatically on every push to `main` or `develop` branches:
+
+1. **PHP Lint** - Validates PHP syntax across PHP 7.4, 8.0, 8.1, 8.2, and 8.3
+2. **PHPCS** - Checks WordPress Coding Standards compliance
+3. **Plugin Check** - Validates plugin headers, version consistency, and required files
+4. **Assets Validation** - Checks CSS and JavaScript syntax
+5. **Security Scanning** - Looks for common security issues
+
+```bash
+# View workflow status
+# Check: https://github.com/ReclaimerGold/acf-service-management-suite/actions
+
+# Workflow runs automatically on:
+# - Push to main/develop branches
+# - Pull requests to main/develop branches
+```
+
+#### Release Workflow (`.github/workflows/release.yml`)
+
+Runs automatically when you push a version tag:
+
+1. **Validates** tag format (must be `vX.Y.Z`)
+2. **Checks** version consistency across all files
+3. **Builds** release package with proper WordPress directory structure
+4. **Creates** `readme.txt` for WordPress.org compatibility
+5. **Removes** development files (.github/, workspace/, DEVELOP.md, etc.)
+6. **Generates** ZIP archive with checksums (SHA256, MD5)
+7. **Publishes** GitHub release with changelog notes
+
+```bash
+# Trigger a release:
+git tag -a v2.0.0 -m "chore(release): version 2.0.0"
+git push origin v2.0.0
+
+# This automatically:
+# - Runs all tests
+# - Creates release package
+# - Publishes to GitHub Releases
+# - Generates checksums
+```
+
 ### Manual Testing Checklist
 
 Before committing code, test:
@@ -940,22 +987,39 @@ Before committing code, test:
 - [ ] Debug mode shows helpful information
 - [ ] Caching works as expected
 - [ ] Elementor filters function correctly
-- [ ] No PHP errors or warnings
+- [ ] No PHP errors or warnings (check with `php -l`)
 - [ ] No JavaScript console errors
 - [ ] Responsive design works on mobile
 - [ ] Works with ACF Free and Pro
 - [ ] Works with Elementor Free and Pro
+- [ ] **GitHub Actions tests pass** (check after pushing)
 
 ### Testing Environments
 
 Test on:
 
 - [ ] WordPress 5.8 (minimum version)
-- [ ] WordPress latest (currently 6.7)
+- [ ] WordPress latest (currently 6.4+)
 - [ ] PHP 7.4 (minimum version)
 - [ ] PHP 8.1+ (recommended version)
 - [ ] Different themes (Twenty Twenty-Four, Astra, etc.)
 - [ ] Multisite installation
+
+#### Local Testing with GitHub Actions
+
+You can test workflows locally using [act](https://github.com/nektos/act):
+
+```bash
+# Install act
+# macOS: brew install act
+# Linux: Check https://github.com/nektos/act
+
+# Test the test workflow
+act push -W .github/workflows/test.yml
+
+# Test the release workflow (dry run)
+act push -W .github/workflows/release.yml --input tag=v2.0.0
+```
 
 ### Creating Test Data
 
@@ -1114,98 +1178,227 @@ docs: update installation instructions
 refactor!: change text domain to acf-sms
 ```
 
+
 ### Code Review Process
 
-1. Automated checks run (coding standards, syntax)
-2. Maintainer reviews code
-3. Feedback provided or approval given
-4. Changes requested if needed
-5. Final approval and merge
+1. **Automated Checks Run** - GitHub Actions validates code
+   - PHP syntax check (7.4-8.3)
+   - WordPress Coding Standards (PHPCS)
+   - Plugin structure validation
+   - Security scanning
+2. **Manual Review** - Maintainer reviews code quality
+3. **Feedback** - Comments and suggestions provided
+4. **Approval** - Changes approved or more work requested
+5. **Merge** - PR merged into main branch
 
 ---
 
 ## Release Process
 
+### Automated Release System
+
+**The plugin uses GitHub Actions to automate releases.** When you push a tag, it automatically:
+
+1. ✅ Validates tag format and version consistency
+2. 📦 Builds release package with proper structure
+3. 🧹 Removes development files (.github/, workspace/, DEVELOP.md)
+4. 📝 Creates WordPress.org compatible `readme.txt`
+5. 🗜️ Generates ZIP archive
+6. 🔐 Creates SHA256 and MD5 checksums
+7. 🚀 Publishes to GitHub Releases with changelog
+
 ### Version Numbering
 
 Follow semantic versioning: `MAJOR.MINOR.PATCH`
 
-- **MAJOR** (1.0.0 → 2.0.0): Breaking changes
-- **MINOR** (1.0.0 → 1.1.0): New features, backwards compatible
-- **PATCH** (1.0.0 → 1.0.1): Bug fixes only
+- **MAJOR** (1.0.0 → 2.0.0): Breaking changes (`feat!:` or `BREAKING CHANGE:`)
+- **MINOR** (1.0.0 → 1.1.0): New features (`feat:`)
+- **PATCH** (1.0.0 → 1.0.1): Bug fixes only (`fix:`)
 
 ### Pre-Release Checklist
 
-- [ ] All tests pass
-- [ ] No PHP errors or warnings
 - [ ] All commits follow Conventional Commits format
-- [ ] Update CHANGELOG.md with all changes (categorized by type)
-- [ ] Update version in `acf-service-management-suite.php` header
-- [ ] Update `ACF_LS_VERSION` constant
-- [ ] Update version in README.md (badge + credits)
-- [ ] Update version in copilot-instructions.md
+- [ ] **GitHub Actions tests pass** (check Actions tab)
+- [ ] Update CHANGELOG.md with all changes (categorized by commit type)
+- [ ] Update version in 4 files:
+  - [ ] `acf-location-shortcodes.php` header
+  - [ ] `ACF_LS_VERSION` constant
+  - [ ] README.md (badge + credits)
+  - [ ] copilot-instructions.md
 - [ ] Update "Last Updated" dates in all docs
-- [ ] Verify version numbers match across all 4 files
-- [ ] Test on multiple environments
+- [ ] Verify version numbers match across all files
 - [ ] No .old, .bak, or backup files in repository
-- [ ] Clean workspace/ directory (or verify it's gitignored)
+- [ ] Clean workspace/ directory (verify gitignored)
+- [ ] Test on multiple environments manually
 
 ### Release Steps
 
 1. **Determine Version Bump**
    
-   Review commits since last release to determine version:
+   Review commits since last release:
    ```bash
-   git log v1.1.0..HEAD --oneline
+   # View commits since last tag
+   git log $(git describe --tags --abbrev=0)..HEAD --oneline
+   
+   # Or filter by type
+   git log $(git describe --tags --abbrev=0)..HEAD --grep="^feat" --oneline
+   git log $(git describe --tags --abbrev=0)..HEAD --grep="^fix" --oneline
+   git log $(git describe --tags --abbrev=0)..HEAD --grep="!" --oneline
    ```
    
-   - Any `feat!:` or `BREAKING CHANGE:` → **MAJOR** version
-   - Any `feat:` commits → **MINOR** version
-   - Only `fix:` commits → **PATCH** version
-   - Only `docs:`, `chore:`, `style:` → **No version bump** (bundle with next release)
+   Determine version based on commit types:
+   - Any `feat!:` or `BREAKING CHANGE:` → **MAJOR** version (2.0.0 → 3.0.0)
+   - Any `feat:` commits → **MINOR** version (2.0.0 → 2.1.0)
+   - Only `fix:` commits → **PATCH** version (2.0.0 → 2.0.1)
+   - Only `docs:`, `chore:`, `style:` → Bundle with next feature/fix release
 
 2. **Update Version Numbers**
+   
+   Update all 4 files with new version number:
    ```bash
-   # Update all version references (see Pre-Release Checklist)
+   # acf-location-shortcodes.php
+   # - Version: 2.1.0 (plugin header)
+   # - ACF_LS_VERSION constant
+   
+   # README.md
+   # - Badge: ![Version](https://img.shields.io/badge/version-2.1.0-blue)
+   # - Credits section
+   
+   # copilot-instructions.md
+   # - Current Version: 2.1.0
+   
+   # CHANGELOG.md
+   # - See next step
    ```
 
 3. **Update CHANGELOG.md**
    
-   Organize changes by conventional commit type:
+   Move items from `[Unreleased]` to new version section, organized by commit type:
    ```markdown
+   ## [Unreleased]
+   <!-- Empty for now -->
+   
+   ---
+   
    ## [2.1.0] - 2025-11-15
    
-   ### Added (from feat: commits)
-   - New location_distance shortcode
+   ### ✅ Added (feat: commits)
+   - New `location_distance` shortcode for calculating distances
+   - Elementor distance filter control
    
-   ### Fixed (from fix: commits)
-   - Cache clearing on post update
+   ### ✅ Fixed (fix: commits)
+   - Cache invalidation on post update
+   - Empty field handling in shortcodes
+   
+   ### ✅ Improved (perf: commits)
+   - Database query optimization for location lists
    ```
 
 4. **Commit Version Bump**
    ```bash
-   git add CHANGELOG.md acf-service-management-suite.php README.md copilot-instructions.md
-   git commit -m "chore(release): bump version to 2.1.0"
+   git add CHANGELOG.md acf-location-shortcodes.php README.md copilot-instructions.md
+   git commit -m "chore(release): bump version to 2.1.0
+
+   - Update all version references across 4 files
+   - Move Unreleased changes to 2.1.0 in CHANGELOG
+   - Update Last Updated dates"
    ```
 
-5. **Create Git Tag**
+5. **Create and Push Git Tag**
    ```bash
+   # Create annotated tag
    git tag -a v2.1.0 -m "chore(release): version 2.1.0"
-   git push origin main --tags
+   
+   # Push commits and tag
+   git push origin main
+   git push origin v2.1.0
    ```
 
-5. **Create GitHub Release**
-   - Go to GitHub Releases
-   - Create new release from tag
-   - Copy CHANGELOG content
-   - Upload ZIP file (if applicable)
+6. **Automated Release Workflow Runs**
+   
+   GitHub Actions automatically:
+   - Validates version consistency
+   - Runs all tests
+   - Builds release package
+   - Creates GitHub Release
+   - Uploads ZIP with checksums
+   
+   **Monitor progress:**
+   ```
+   https://github.com/ReclaimerGold/acf-service-management-suite/actions
+   ```
 
-6. **WordPress.org Release** (if applicable)
+7. **Verify Release**
+   
+   Once workflow completes (typically 2-5 minutes):
    ```bash
-   # Deploy to WordPress.org SVN
-   svn co https://plugins.svn.wordpress.org/acf-location-shortcodes
-   # Copy files, commit
+   # Check release page
+   open https://github.com/ReclaimerGold/acf-service-management-suite/releases
+   
+   # Download and verify ZIP
+   wget https://github.com/ReclaimerGold/acf-service-management-suite/releases/download/v2.1.0/acf-service-management-suite-2.1.0.zip
+   
+   # Verify checksum
+   sha256sum -c acf-service-management-suite-2.1.0.zip.sha256
    ```
+
+8. **WordPress.org Release** (Future - when listed on WordPress.org)
+   
+   ```bash
+   # Download release ZIP from GitHub
+   wget https://github.com/ReclaimerGold/acf-service-management-suite/releases/download/v2.1.0/acf-service-management-suite-2.1.0.zip
+   
+   # Deploy to WordPress.org SVN
+   svn co https://plugins.svn.wordpress.org/acf-service-management-suite
+   cd acf-service-management-suite
+   
+   # Extract to trunk
+   unzip ../acf-service-management-suite-2.1.0.zip -d trunk/
+   
+   # Create tag
+   svn cp trunk tags/2.1.0
+   
+   # Commit
+   svn ci -m "Release 2.1.0"
+   ```
+
+### Rollback Process
+
+If a release has issues:
+
+```bash
+# Delete GitHub release (via web interface)
+# https://github.com/ReclaimerGold/acf-service-management-suite/releases
+
+# Delete tag locally and remotely
+git tag -d v2.1.0
+git push origin :refs/tags/v2.1.0
+
+# Revert version bump commit if needed
+git revert HEAD
+git push origin main
+```
+
+### Release Checklist
+
+After release is published:
+
+- [ ] GitHub Release created with correct version
+- [ ] ZIP file downloads correctly
+- [ ] Checksums validate
+- [ ] CHANGELOG reflects release
+- [ ] All tests passed in GitHub Actions
+- [ ] Test installation from ZIP on fresh WordPress site
+- [ ] Announce release (if applicable)
+
+---
+
+## Advanced Topics
+
+### Performance Optimization
+
+#### Database Query Optimization
+````
 
 ---
 

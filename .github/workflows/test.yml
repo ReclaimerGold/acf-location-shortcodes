@@ -1,0 +1,260 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # PHP Syntax and Linting
+  php-lint:
+    name: PHP Lint (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: PHP Syntax Check
+        run: |
+          find . -name "*.php" -not -path "./vendor/*" -not -path "./workspace/*" -print0 | xargs -0 -n1 php -l
+
+  # WordPress Coding Standards
+  phpcs:
+    name: PHPCS (WordPress Coding Standards)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer, cs2pr
+          coverage: none
+
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: |
+          if [ ! -f composer.json ]; then
+            composer init --no-interaction --name="fallstechgroup/acf-service-management-suite"
+          fi
+          composer require --dev wp-coding-standards/wpcs dealerdirect/phpcodesniffer-composer-installer --no-interaction
+
+      - name: Run PHPCS
+        run: |
+          vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=vendor/,workspace/ --report=checkstyle . | cs2pr --graceful-warnings
+
+  # WordPress Plugin Check
+  plugin-check:
+    name: WordPress Plugin Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+
+      - name: Check plugin headers
+        run: |
+          # Verify plugin header exists
+          if ! grep -q "Plugin Name:" acf-location-shortcodes.php; then
+            echo "Error: Plugin Name header not found"
+            exit 1
+          fi
+          
+          # Verify version matches
+          PLUGIN_VERSION=$(grep "Version:" acf-location-shortcodes.php | head -1 | sed 's/.*Version: *\([0-9.]*\).*/\1/')
+          CONST_VERSION=$(grep "ACF_LS_VERSION" acf-location-shortcodes.php | sed "s/.*'\([0-9.]*\)'.*/\1/")
+          
+          if [ "$PLUGIN_VERSION" != "$CONST_VERSION" ]; then
+            echo "Error: Plugin version ($PLUGIN_VERSION) doesn't match constant version ($CONST_VERSION)"
+            exit 1
+          fi
+          
+          echo "✓ Plugin headers valid"
+          echo "✓ Version: $PLUGIN_VERSION"
+
+      - name: Check required files
+        run: |
+          required_files=(
+            "acf-location-shortcodes.php"
+            "README.md"
+            "CHANGELOG.md"
+            "includes/class-shortcodes.php"
+            "includes/class-acf-helpers.php"
+            "includes/class-elementor-integration.php"
+            "assets/css/shortcodes.css"
+          )
+          
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "Error: Required file missing: $file"
+              exit 1
+            fi
+          done
+          
+          echo "✓ All required files present"
+
+      - name: Check for development artifacts
+        run: |
+          # Check for files that shouldn't be in release
+          artifacts=(
+            "*.log"
+            "*.tmp"
+            "*.old"
+            "*.bak"
+            "*-backup.*"
+            ".DS_Store"
+            "Thumbs.db"
+          )
+          
+          found_artifacts=0
+          for pattern in "${artifacts[@]}"; do
+            if find . -name "$pattern" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./workspace/*" | grep -q .; then
+              echo "Warning: Found development artifacts matching: $pattern"
+              find . -name "$pattern" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./workspace/*"
+              found_artifacts=1
+            fi
+          done
+          
+          if [ $found_artifacts -eq 1 ]; then
+            echo "⚠ Development artifacts found (see above)"
+          else
+            echo "✓ No development artifacts found"
+          fi
+
+  # JavaScript/CSS Validation (if applicable)
+  assets-check:
+    name: Assets Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Validate CSS
+        run: |
+          if [ -d "assets/css" ]; then
+            # Basic CSS validation - check for syntax errors
+            for file in assets/css/*.css; do
+              if [ -f "$file" ]; then
+                echo "Checking $file..."
+                # Simple check for unclosed brackets
+                if ! awk 'BEGIN{count=0} /{/{count++} /}/{count--} END{if(count!=0)exit 1}' "$file"; then
+                  echo "Error: CSS syntax error in $file"
+                  exit 1
+                fi
+              fi
+            done
+            echo "✓ CSS files valid"
+          fi
+
+      - name: Validate JavaScript
+        run: |
+          if [ -d "assets/js" ]; then
+            for file in assets/js/*.js; do
+              if [ -f "$file" ]; then
+                echo "Checking $file..."
+                if ! node -c "$file" 2>/dev/null; then
+                  echo "Error: JavaScript syntax error in $file"
+                  exit 1
+                fi
+              fi
+            done
+            echo "✓ JavaScript files valid"
+          fi
+
+  # Security Checks
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for hardcoded credentials
+        run: |
+          # Look for common credential patterns
+          if grep -r -i "password.*=.*['\"]" --include="*.php" --exclude-dir={vendor,workspace} . | grep -v "// " | grep -v "placeholder"; then
+            echo "⚠ Potential hardcoded passwords found"
+          else
+            echo "✓ No hardcoded credentials detected"
+          fi
+
+      - name: Check for SQL injection vulnerabilities
+        run: |
+          # Look for direct SQL queries without $wpdb->prepare
+          if grep -r "\$wpdb->query\|->get_results\|->get_var" --include="*.php" --exclude-dir={vendor,workspace} . | grep -v "prepare"; then
+            echo "⚠ Potential SQL injection vulnerabilities (unprepared queries)"
+          else
+            echo "✓ No obvious SQL injection vulnerabilities"
+          fi
+
+      - name: Check for proper escaping
+        run: |
+          # Look for echo statements without escaping
+          echo "Checking for unescaped output..."
+          if grep -r "echo \$" --include="*.php" --exclude-dir={vendor,workspace} . | grep -v "esc_"; then
+            echo "⚠ Found potential unescaped output"
+          else
+            echo "✓ Output appears to be properly escaped"
+          fi
+
+  # Test Summary
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [php-lint, phpcs, plugin-check, assets-check, security]
+    if: always()
+    
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.php-lint.result }}" != "success" ] || \
+             [ "${{ needs.phpcs.result }}" != "success" ] || \
+             [ "${{ needs.plugin-check.result }}" != "success" ] || \
+             [ "${{ needs.assets-check.result }}" != "success" ] || \
+             [ "${{ needs.security.result }}" != "success" ]; then
+            echo "❌ Some tests failed"
+            exit 1
+          else
+            echo "✅ All tests passed!"
+          fi

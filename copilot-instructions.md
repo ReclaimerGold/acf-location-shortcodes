@@ -160,6 +160,10 @@ acf-service-management-suite/
 ├── assets/
 │   ├── css/shortcodes.css               # Minimal frontend styles
 │   └── js/elementor-controls.js         # Elementor editor controls
+├── .github/
+│   └── workflows/
+│       ├── test.yml                     # Automated testing (on push)
+│       └── release.yml                  # Automated releases (on tag)
 ├── workspace/                           # GITIGNORED - temp files, drafts, notes
 │   └── README.md                        # Explains workspace usage
 ├── acf-export-2025-10-28.json           # Field structure (import ready)
@@ -167,11 +171,30 @@ acf-service-management-suite/
 ├── DEVELOP.md                           # Extension/contribution guide
 ├── CHANGELOG.md                         # Version history
 ├── copilot-instructions.md              # This file
-└── .gitignore                           # Excludes workspace/, *.old, *.bak
+├── .gitignore                           # Excludes workspace/, *.old, *.bak
+└── .gitattributes                       # Export exclusions (dev files)
 ```
 
 **NO OTHER .md FILES ALLOWED** - Consolidate or delete.
 **NO BACKUP FILES (.old, .bak, -copy) ALLOWED** - Use workspace/ or Git history.
+
+### GitHub Actions Workflows
+
+**`.github/workflows/test.yml`** - Runs on every push/PR:
+- PHP syntax validation (7.4-8.3)
+- WordPress Coding Standards (PHPCS)
+- Plugin structure validation
+- Security scanning
+- Asset validation (CSS/JS)
+
+**`.github/workflows/release.yml`** - Runs on version tag push:
+- Validates tag format (vX.Y.Z)
+- Checks version consistency
+- Builds release package
+- Removes dev files (.github/, workspace/, DEVELOP.md)
+- Creates WordPress.org compatible readme.txt
+- Generates ZIP with checksums
+- Publishes GitHub Release
 
 ## Class Architecture
 

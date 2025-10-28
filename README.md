@@ -8,6 +8,7 @@ Built on Advanced Custom Fields (ACF), this plugin provides powerful shortcodes,
 [![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-purple?logo=php)](https://php.net)
 [![Version](https://img.shields.io/badge/Version-2.0.0-green)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-GPLv2-red)](LICENSE)
+[![Tests](https://github.com/ReclaimerGold/acf-service-management-suite/actions/workflows/test.yml/badge.svg)](https://github.com/ReclaimerGold/acf-service-management-suite/actions/workflows/test.yml)
 [![GitHub Issues](https://img.shields.io/github/issues/ReclaimerGold/acf-service-management-suite)](https://github.com/ReclaimerGold/acf-service-management-suite/issues)
 
 ---
