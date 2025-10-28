@@ -169,45 +169,124 @@ Metro area from specific location
 
 ### `[location_list]`
 
-Display physical locations and their child service areas with map marker pins (📍).
+Display locations with two modes: all locations, or location-specific (parent + children only).
 
-Each physical location is listed, followed by any service areas that have that physical location set in their `servicing_physical_location` field.
+**Physical Location Definition:**
+- A location WITH an `address` field value = Physical Location
+- A location WITHOUT an `address` field = Service Area
+
+**Two Modes:**
+
+1. **All Locations Mode** (default): Lists all locations, optionally filtered by type
+2. **Location-Specific Mode**: Context-aware display of parent and children only
 
 **Attributes:**
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
+| `location_specific` | bool | false | Enable context-aware mode (parent + children only) |
+| `location_id` | int | Current post ID | Location post to use (for location_specific mode) |
+| `type` | string | 'all' | Filter: 'all', 'physical', 'service' (for all locations mode) |
 | `orderby` | string | 'title' | Sort by: 'title', 'date', 'ID' |
 | `order` | string | 'ASC' | Sort order: 'ASC' or 'DESC' |
-| `limit` | int | 0 (all) | Maximum physical locations to show |
+| `limit` | int | 0 (all) | Maximum locations to show (for all locations mode) |
 | `class` | string | '' | Additional CSS class |
 | `show_emoji` | string | 'yes' | Show map pin emoji ('yes'/'no') |
 
 **Examples:**
 
+**All Locations Mode:**
 ```
 [location_list]
 ```
-Output: 
-- 📍 Sioux Falls (physical location)
-- 📍 Brandon (service area under Sioux Falls)
-- 📍 Harrisburg (service area under Sioux Falls)
-- 📍 West Fargo (physical location)
-- 📍 Fargo (service area under West Fargo)
+Output: Lists ALL locations (both physical and service areas) alphabetically
+- 📍 Dilworth, Minnesota
+- 📍 Fargo, North Dakota  
+- 📍 Moorhead, Minnesota
+- 📍 Sioux Falls, South Dakota
+- 📍 West Fargo, North Dakota
 
 ```
-[location_list orderby="title" order="DESC"]
+[location_list type="physical"]
 ```
-Show physical locations in reverse alphabetical order with their service areas
+Output: Lists only physical locations (those with address field)
+- 📍 Fargo, North Dakota
+- 📍 Sioux Falls, South Dakota
 
 ```
-[location_list limit="3"]
+[location_list type="service"]
 ```
-Show first 3 physical locations and all their service areas
+Output: Lists only service areas (those without address field)
+- 📍 Dilworth, Minnesota
+- 📍 Moorhead, Minnesota
+- 📍 West Fargo, North Dakota
 
 ```
-[location_list class="location-directory" show_emoji="no"]
+[location_list orderby="title" order="DESC" limit="3"]
+```
+Show first 3 locations in reverse alphabetical order
+
+**Location-Specific Mode:**
+```
+[location_list location_specific="true"]
+```
+Output (on "Fargo, North Dakota" physical location page):
+- 📍 Fargo, North Dakota (the physical location)
+- 📍 Dilworth, Minnesota (service area under Fargo)
+- 📍 Moorhead, Minnesota (service area under Fargo)
+- 📍 West Fargo, North Dakota (service area under Fargo)
+
+Output (on "Dilworth, Minnesota" service area page):
+- 📍 Fargo, North Dakota (the parent physical location)
+- 📍 Dilworth, Minnesota (current service area)
+- 📍 Moorhead, Minnesota (sibling service area)
+- 📍 West Fargo, North Dakota (sibling service area)
+
+```
+[location_list location_specific="true" orderby="title" order="DESC"]
+```
+Show parent and children in reverse alphabetical order
+
+```
+[location_list location_specific="true" class="location-directory" show_emoji="no"]
 ```
 Custom styling without emojis
+
+---
+
+### `[location_address]`
+
+Get the physical address for a location or its servicing physical location.
+
+Returns the address in the format: `Site Title, Address`
+
+This is particularly useful for service areas that don't have their own address - it will automatically use the parent physical location's address.
+
+**Attributes:**
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `location_id` | int | Current post ID | Location post to display |
+
+**Examples:**
+
+```
+[location_address]
+```
+Output (physical location): Sioux Falls, 123 Main St, Sioux Falls, SD 57104
+
+Output (service area): Sioux Falls, 123 Main St, Sioux Falls, SD 57104
+(Uses the servicing physical location's title and address)
+
+```
+[location_address location_id="456"]
+```
+Get address from specific location #456
+
+**Use Case - Elementor Google Map:**
+In an Elementor Google Map widget, use this shortcode in the Address field:
+```
+[location_address]
+```
+This ensures service areas display the correct physical location on the map.
 
 ---
 
@@ -301,11 +380,15 @@ Create a comprehensive location page:
 
 ### 2. Service Area Overview
 
-Display all service areas with their communities:
+Display all locations:
 
 ```php
 <!-- Display all locations -->
 <h2>Our Service Locations</h2>
+[location_list type="all"]
+
+<!-- Display only physical locations -->
+<h2>Physical Office Locations</h2>
 [location_list type="physical"]
 
 <!-- In a WordPress loop of location posts -->
@@ -321,15 +404,15 @@ Display all service areas with their communities:
 
 ### 3. Location Directory
 
-Create a complete hierarchical location directory:
+Display location-specific family on location pages:
 
 ```html
-<h2>All Service Locations</h2>
-<p>Physical locations are listed with their service areas below them.</p>
-[location_list orderby="title"]
+<h2>Service Locations</h2>
+<p>Our physical location and all service areas we cover.</p>
+[location_list location_specific="true" orderby="title"]
 ```
 
-This will display all physical locations, each followed by their child service areas.
+This will display the physical location and all its service areas, regardless of whether you're on a physical location page or a service area page.
 
 ### 4. Location-Specific Testimonials
 
