@@ -5,6 +5,35 @@ All notable changes to the ACF Location Shortcodes plugin will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-10-28 (In Development)
+
+### Added
+- **Debug Mode:** New `ACF_LS_DEBUG` constant for verbose error output
+- **Enhanced Error Messages:** Contextual, actionable error messages with debug data
+- **Field Validation:** New helper methods to check ACF field existence
+- **Logging System:** Static `log()` method for debugging operations
+- **One-Click ACF Install:** Admin notice with button to install ACF from WordPress.org
+- **Admin Notices:** Configuration validation and setup guidance
+- **Field Suggestions:** Suggest similar field names when fields don't exist
+- **Elementor Debugging:** Query modification logging and validation
+
+### Enhanced
+- `render_error()` method now supports collapsible debug data
+- All shortcode error messages now include context and fix suggestions
+- ACF helper methods return structured data with success/error states
+- Admin notices are dismissible and use transient storage
+
+### Security
+- One-click install includes nonce verification and capability checks
+- All error output respects user capabilities
+- Debug mode is opt-in and respects WP_DEBUG
+
+### Documentation
+- Added `DEBUGGING-IMPROVEMENT-PLAN.md` with complete technical specs
+- Updated `copilot-instructions.md` with debugging guidelines
+- Enhanced `PLAN.md` with v1.1.0 features
+- Added troubleshooting section to documentation (planned)
+
 ## [1.0.0] - 2025-10-27
 
 ### Added

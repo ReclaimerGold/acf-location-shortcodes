@@ -388,8 +388,28 @@ test: Add unit tests for shortcode handler
 5. Lazy load assets
 
 ## Current Development Phase
-**Phase:** Planning Complete
-**Next Steps:** Begin Phase 1 - Core Plugin Setup
+**Phase:** v1.1.0 Implementation In Progress
+**Current Version:** 1.1.0
+**Next Steps:** Complete debugging improvements and one-click ACF install implementation
+
+### Active Planning Documents
+- `DEBUGGING-IMPROVEMENT-PLAN.md` - Comprehensive debugging and UX improvements for v1.1.0
+- `PLAN.md` - Overall project roadmap and technical architecture
+
+### Version Management
+**Current Plugin Version:** 1.1.0
+
+When making changes:
+- Update version in `acf-location-shortcodes.php` header comment
+- Update `ACF_LS_VERSION` constant in main plugin file
+- Update version in `copilot-instructions.md` (this file)
+- Update CHANGELOG.md with changes
+- Update "Last Updated" dates in documentation
+
+**Version Scheme:**
+- **Major (X.0.0)**: Breaking changes, major architecture changes
+- **Minor (1.X.0)**: New features, enhancements, no breaking changes
+- **Patch (1.1.X)**: Bug fixes, minor improvements only
 
 ## Questions to Ask Before Coding
 
@@ -401,9 +421,205 @@ test: Add unit tests for shortcode handler
 6. Is this properly sanitized for input?
 7. Is this translatable?
 8. Is this performant with 100+ locations?
+9. **NEW:** What error message will the user see if this fails?
+10. **NEW:** Is debug information provided for troubleshooting?
+11. **NEW:** Can the user fix this issue themselves based on the error?
 
 ---
 
-**Last Updated:** October 27, 2025
-**Current Version:** Planning Phase
+## Debugging & Error Handling Guidelines (v1.1.0+)
+
+### Error Message Standards
+
+#### Always Include:
+1. **What went wrong** - Clear description of the error
+2. **Why it happened** - Context about the cause
+3. **How to fix it** - Actionable next steps
+4. **What was provided** - Show user input that caused the error
+
+#### Error Message Template
+```php
+// Good Error Message
+return $this->render_error(
+    sprintf(
+        __( 'Post ID %d is not a location post. Found post type: %s. Please use a valid location post ID.', 'acf-location-shortcodes' ),
+        $location_id,
+        get_post_type( $location_id )
+    ),
+    array(
+        'location_id' => $location_id,
+        'post_type' => get_post_type( $location_id ),
+        'post_title' => get_the_title( $location_id ),
+        'edit_link' => get_edit_post_link( $location_id ),
+    )
+);
+
+// Bad Error Message (Don't do this)
+return $this->render_error( __( 'Invalid location ID.', 'acf-location-shortcodes' ) );
+```
+
+### Debug Mode Implementation
+
+#### When to Add Debug Output
+- Field validation failures
+- Empty or missing data
+- Query modifications (Elementor)
+- Cache operations
+- ACF field existence checks
+- Post type validation
+
+#### Debug Output Pattern
+```php
+// Check if debug mode is enabled
+if ( defined( 'ACF_LS_DEBUG' ) && ACF_LS_DEBUG ) {
+    // Collect debug data
+    $debug_data = array(
+        'field_name' => $field_name,
+        'post_id' => $post_id,
+        'available_fields' => $this->get_field_names( $post_id ),
+    );
+    
+    // Include in error
+    return $this->render_error( $message, $debug_data );
+}
+```
+
+### Logging Standards
+
+#### When to Log
+- Cache hits and misses
+- Field validation results
+- Query filter applications
+- Plugin installation attempts
+- Configuration validation
+
+#### Logging Pattern
+```php
+// Use static log method
+ACF_Location_Shortcodes::log(
+    'Communities retrieved from cache',
+    array(
+        'post_id' => $post_id,
+        'count' => count( $cached ),
+    ),
+    'info' // or 'warning', 'error'
+);
+```
+
+#### Log Levels
+- **info** - Normal operations, cache hits, successful validations
+- **warning** - Potential issues, missing optional data, fallbacks used
+- **error** - Failures, missing required data, invalid configurations
+
+### Field Validation Pattern
+
+#### Always Validate Fields Before Use
+```php
+// Check if field exists first
+if ( ! $this->acf_helpers->field_exists( 'surrounding_community_list', $location_id ) ) {
+    return $this->render_error(
+        sprintf(
+            __( 'ACF field "surrounding_community_list" not found on location "%s" (ID: %d).', 'acf-location-shortcodes' ),
+            get_the_title( $location_id ),
+            $location_id
+        ),
+        array(
+            'location_id' => $location_id,
+            'field_name' => 'surrounding_community_list',
+            'available_fields' => $this->acf_helpers->get_field_names( $location_id ),
+        )
+    );
+}
+
+// Then get the value
+$communities = get_field( 'surrounding_community_list', $location_id );
+```
+
+### Admin Notice Guidelines
+
+#### Notice Types
+1. **Error** (red) - Critical issues preventing functionality
+2. **Warning** (yellow) - Configuration issues or missing optional features
+3. **Success** (green) - Successful operations (ACF installed, setup complete)
+4. **Info** (blue) - General information, tips, guidance
+
+#### Notice Display Logic
+```php
+// Only show to users who can fix the issue
+if ( ! current_user_can( 'manage_options' ) ) {
+    return;
+}
+
+// Use transients to avoid repeated checks
+$notice_dismissed = get_transient( 'acf_ls_notice_dismissed_field_check' );
+if ( $notice_dismissed ) {
+    return;
+}
+
+// Make dismissible for non-critical notices
+// Store dismissal in user meta or transient
+```
+
+### One-Click Install Implementation
+
+#### Security Requirements
+```php
+// Verify nonce
+check_ajax_referer( 'acf_ls_install_acf', 'nonce' );
+
+// Check capabilities
+if ( ! current_user_can( 'install_plugins' ) || ! current_user_can( 'activate_plugins' ) ) {
+    wp_send_json_error( __( 'Insufficient permissions', 'acf-location-shortcodes' ) );
+}
+
+// Sanitize input (if any)
+$action = sanitize_key( $_POST['action'] );
+```
+
+#### Installation Flow
+```php
+// Include WordPress plugin installation libraries
+if ( ! function_exists( 'plugins_api' ) ) {
+    require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+}
+if ( ! class_exists( 'WP_Upgrader' ) ) {
+    require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+}
+
+// Use Plugin_Upgrader to install
+// Activate plugin
+// Verify installation
+// Provide feedback
+```
+
+### Error Recovery Suggestions
+
+#### Suggest Similar Field Names
+```php
+// If field doesn't exist, suggest alternatives
+$available_fields = $this->get_field_names( $post_id );
+$suggestions = $this->find_similar_fields( $field_name, $available_fields );
+
+if ( ! empty( $suggestions ) ) {
+    $error .= ' ' . sprintf(
+        __( 'Did you mean: %s?', 'acf-location-shortcodes' ),
+        implode( ', ', $suggestions )
+    );
+}
+```
+
+#### Provide Edit Links
+```php
+// Include links to fix the issue
+$debug_data['actions'] = array(
+    'edit_post' => get_edit_post_link( $post_id ),
+    'acf_fields' => admin_url( 'edit.php?post_type=acf-field-group' ),
+    'create_location' => admin_url( 'post-new.php?post_type=location' ),
+);
+```
+
+---
+
+**Last Updated:** October 28, 2025
+**Current Version:** 1.1.0 (in development)
 **Primary Developer:** Ryan Reiffenberger

@@ -3,7 +3,7 @@
  * Plugin Name: ACF Location Shortcodes
  * Plugin URI: https://github.com/rreiffenberger/acf-location-shortcodes
  * Description: Provides shortcodes and Elementor integration for displaying and filtering location data from ACF custom post types.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Requires at least: 5.8
  * Requires PHP: 7.4
  * Author: Ryan Reiffenberger
@@ -22,10 +22,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants.
-define( 'ACF_LS_VERSION', '1.0.0' );
+define( 'ACF_LS_VERSION', '1.1.0' );
 define( 'ACF_LS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ACF_LS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'ACF_LS_PLUGIN_FILE', __FILE__ );
+
+// Define debug mode (can be overridden in wp-config.php).
+if ( ! defined( 'ACF_LS_DEBUG' ) ) {
+	define( 'ACF_LS_DEBUG', defined( 'WP_DEBUG' ) && WP_DEBUG );
+}
 
 /**
  * Main plugin class.
@@ -205,6 +210,33 @@ class ACF_Location_Shortcodes {
 		);
 
 		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses_post( $message ) );
+	}
+
+	/**
+	 * Log debug messages.
+	 *
+	 * @since 1.1.0
+	 * @param string $message Log message.
+	 * @param array  $data    Optional. Additional data to log.
+	 * @param string $level   Optional. Log level: 'info', 'warning', 'error'. Default 'info'.
+	 */
+	public static function log( $message, $data = array(), $level = 'info' ) {
+		// Only log when debug mode is enabled.
+		if ( ! defined( 'ACF_LS_DEBUG' ) || ! ACF_LS_DEBUG ) {
+			return;
+		}
+
+		$log_message = sprintf(
+			'[ACF Location Shortcodes][%s] %s',
+			strtoupper( $level ),
+			$message
+		);
+
+		if ( ! empty( $data ) ) {
+			$log_message .= ' | Data: ' . wp_json_encode( $data );
+		}
+
+		error_log( $log_message );
 	}
 }
 

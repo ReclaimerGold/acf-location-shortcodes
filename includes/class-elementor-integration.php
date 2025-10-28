@@ -160,11 +160,19 @@ class ACF_Location_Shortcodes_Elementor {
 
 		// If still no location IDs, return original query.
 		if ( empty( $location_ids ) ) {
+			ACF_Location_Shortcodes::log(
+				'Elementor filter enabled but no location IDs found',
+				array(
+					'widget'   => $widget->get_name(),
+					'settings' => $settings,
+				),
+				'warning'
+			);
 			return $query_args;
 		}
 
 		// Get filter mode and field name.
-		$filter_mode      = ! empty( $settings['acf_ls_filter_mode'] ) ? $settings['acf_ls_filter_mode'] : 'any';
+		$filter_mode        = ! empty( $settings['acf_ls_filter_mode'] ) ? $settings['acf_ls_filter_mode'] : 'any';
 		$relationship_field = ! empty( $settings['acf_ls_relationship_field'] ) ? $settings['acf_ls_relationship_field'] : 'assigned_location';
 
 		// Sanitize location IDs.
@@ -172,8 +180,24 @@ class ACF_Location_Shortcodes_Elementor {
 		$location_ids = array_filter( $location_ids );
 
 		if ( empty( $location_ids ) ) {
+			ACF_Location_Shortcodes::log(
+				'No valid location IDs after sanitization',
+				array( 'widget' => $widget->get_name() ),
+				'warning'
+			);
 			return $query_args;
 		}
+
+		ACF_Location_Shortcodes::log(
+			'Applying Elementor location filter',
+			array(
+				'widget'             => $widget->get_name(),
+				'location_ids'       => $location_ids,
+				'filter_mode'        => $filter_mode,
+				'relationship_field' => $relationship_field,
+			),
+			'info'
+		);
 
 		// Initialize meta_query if not set.
 		if ( ! isset( $query_args['meta_query'] ) ) {

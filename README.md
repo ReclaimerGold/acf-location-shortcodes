@@ -146,5 +146,5 @@ GPL v2 or later
 ## Credits
 
 Developed by Ryan Reiffenberger  
-**Version:** 1.0.0  
-**Last Updated:** October 27, 2025
+**Version:** 1.1.0  
+**Last Updated:** October 28, 2025

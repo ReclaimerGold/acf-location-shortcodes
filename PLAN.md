@@ -256,24 +256,67 @@ acf-location-shortcodes/
 
 ## Future Enhancements
 
-### v1.1.0
-- `[location_address]` - Formatted address
+### v1.1.0 - Debugging & User Experience (In Planning)
+**Priority:** High  
+**Status:** Planning Phase
+
+#### Enhanced Debugging
+- Debug mode with `ACF_LS_DEBUG` constant
+- Contextual error messages with actionable solutions
+- Collapsible debug data in error output
+- Comprehensive logging system
+- Field validation and existence checking
+
+#### Error Handling Improvements
+- Structured error returns from helper methods
+- Field name suggestions when fields don't exist
+- Post type validation with alternatives
+- Detailed shortcode parameter validation
+- Elementor query debugging and validation
+
+#### One-Click ACF Installation
+- Admin notice with install button when ACF is missing
+- Automated plugin installation from WordPress.org
+- Automatic activation after installation
+- Success/failure feedback with fallback options
+- Security: nonce verification and capability checks
+
+#### Admin Improvements
+- Configuration validation notices
+- Missing field warnings with edit links
+- Setup guidance for first-time users
+- Dismissible notices with transient storage
+- Success notifications for key actions
+
+#### Documentation Updates
+- Comprehensive troubleshooting guide in USAGE.md
+- Debug mode usage instructions
+- Common error solutions reference
+- Installation problem resolution guide
+
+**See:** `DEBUGGING-IMPROVEMENT-PLAN.md` for complete details
+
+### v1.2.0 - Additional Features
+- `[location_address]` - Formatted address shortcode
 - `[location_phone]` - Click-to-call links
 - `[location_map]` - Embedded maps
-- Schema.org markup
-
-### v1.2.0
-- Gutenberg blocks
+- Schema.org markup for local business
+- AJAX-enhanced ACF installation
+- Gutenberg blocks for location data
 - REST API endpoints
 - Admin dashboard widget
+- Setup wizard
 
-### v2.0.0
-- Import/export tools
+### v2.0.0 - Advanced Features
+- Import/export tools for locations
 - Analytics integration
-- Multi-location comparison
+- Multi-location comparison tools
+- Advanced caching system
+- WP-CLI commands
+- Query Monitor integration
 
 ---
 
-**Version:** 1.0.0  
-**Status:** Complete  
-**Last Updated:** October 27, 2025
+**Version:** 1.1.0  
+**Status:** Complete (v1.0.0) | In Development (v1.1.0)  
+**Last Updated:** October 28, 2025

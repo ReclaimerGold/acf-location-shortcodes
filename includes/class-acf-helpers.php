@@ -56,6 +56,14 @@ class ACF_Location_Shortcodes_ACF_Helpers {
 		$cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
 
 		if ( false !== $cached ) {
+			ACF_Location_Shortcodes::log(
+				'Communities retrieved from cache',
+				array(
+					'post_id' => $post_id,
+					'count'   => count( $cached ),
+				),
+				'info'
+			);
 			return $cached;
 		}
 
@@ -63,6 +71,11 @@ class ACF_Location_Shortcodes_ACF_Helpers {
 		$communities_string = get_field( 'surrounding_community_list', $post_id );
 
 		if ( empty( $communities_string ) ) {
+			ACF_Location_Shortcodes::log(
+				'Surrounding community list is empty',
+				array( 'post_id' => $post_id ),
+				'info'
+			);
 			wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_EXPIRATION );
 			return array();
 		}
@@ -72,6 +85,15 @@ class ACF_Location_Shortcodes_ACF_Helpers {
 
 		// Cache the result.
 		wp_cache_set( $cache_key, $communities, self::CACHE_GROUP, self::CACHE_EXPIRATION );
+
+		ACF_Location_Shortcodes::log(
+			'Communities parsed and cached',
+			array(
+				'post_id' => $post_id,
+				'count'   => count( $communities ),
+			),
+			'info'
+		);
 
 		return $communities;
 	}
@@ -129,6 +151,7 @@ class ACF_Location_Shortcodes_ACF_Helpers {
 	 */
 	public function get_servicing_location( $post_id ) {
 		if ( ! function_exists( 'get_field' ) ) {
+			ACF_Location_Shortcodes::log( 'ACF not available for get_servicing_location', array( 'post_id' => $post_id ), 'warning' );
 			return null;
 		}
 
@@ -139,14 +162,33 @@ class ACF_Location_Shortcodes_ACF_Helpers {
 
 		// Only service areas have a servicing location.
 		if ( $this->is_physical_location( $post_id ) ) {
+			ACF_Location_Shortcodes::log(
+				'Post is a physical location, no servicing location',
+				array( 'post_id' => $post_id ),
+				'info'
+			);
 			return null;
 		}
 
 		$servicing_location = get_field( 'servicing_physical_location', $post_id );
 
 		if ( $servicing_location && is_object( $servicing_location ) ) {
+			ACF_Location_Shortcodes::log(
+				'Servicing location found',
+				array(
+					'post_id'            => $post_id,
+					'servicing_location' => $servicing_location->ID,
+				),
+				'info'
+			);
 			return $servicing_location;
 		}
+
+		ACF_Location_Shortcodes::log(
+			'No servicing location found for service area',
+			array( 'post_id' => $post_id ),
+			'warning'
+		);
 
 		return null;
 	}
@@ -288,5 +330,193 @@ class ACF_Location_Shortcodes_ACF_Helpers {
 			// Clear all location caches.
 			wp_cache_delete( 'physical_locations', self::CACHE_GROUP );
 		}
+	}
+
+	/**
+	 * Check if an ACF field exists.
+	 *
+	 * @since 1.1.0
+	 * @param string $field_name ACF field name.
+	 * @param int    $post_id    Optional. Post ID to check field on.
+	 * @return bool True if field exists, false otherwise.
+	 */
+	public function field_exists( $field_name, $post_id = null ) {
+		if ( ! function_exists( 'get_field_object' ) ) {
+			ACF_Location_Shortcodes::log( 'ACF not available for field_exists check', array( 'field_name' => $field_name ), 'warning' );
+			return false;
+		}
+
+		$field = get_field_object( $field_name, $post_id );
+		$exists = ! empty( $field );
+
+		ACF_Location_Shortcodes::log(
+			'Field existence check',
+			array(
+				'field_name' => $field_name,
+				'post_id' => $post_id,
+				'exists' => $exists,
+			),
+			'info'
+		);
+
+		return $exists;
+	}
+
+	/**
+	 * Get all ACF field names for a post.
+	 *
+	 * @since 1.1.0
+	 * @param int $post_id Post ID.
+	 * @return array Array of field names.
+	 */
+	public function get_field_names( $post_id ) {
+		if ( ! function_exists( 'get_field_objects' ) ) {
+			return array();
+		}
+
+		$fields = get_field_objects( $post_id );
+		
+		if ( empty( $fields ) ) {
+			return array();
+		}
+
+		return array_keys( $fields );
+	}
+
+	/**
+	 * Get location field with validation.
+	 *
+	 * Returns structured data with success/error information.
+	 *
+	 * @since 1.1.0
+	 * @param string $field_name ACF field name.
+	 * @param int    $post_id    Post ID.
+	 * @param mixed  $default    Default value if field is empty.
+	 * @return array {
+	 *     Structured result.
+	 *
+	 *     @type bool   $success Whether the field was retrieved successfully.
+	 *     @type mixed  $value   Field value or default.
+	 *     @type string $error   Error message if unsuccessful.
+	 *     @type array  $debug   Debug information.
+	 * }
+	 */
+	public function get_location_field_validated( $field_name, $post_id, $default = '' ) {
+		$result = array(
+			'success' => false,
+			'value'   => $default,
+			'error'   => '',
+			'debug'   => array(),
+		);
+
+		// Check if ACF is available.
+		if ( ! function_exists( 'get_field' ) ) {
+			$result['error'] = __( 'ACF plugin not active', 'acf-location-shortcodes' );
+			ACF_Location_Shortcodes::log( 'ACF not available', array( 'field_name' => $field_name ), 'error' );
+			return $result;
+		}
+
+		// Check if field exists.
+		if ( ! $this->field_exists( $field_name, $post_id ) ) {
+			$available_fields = $this->get_field_names( $post_id );
+			$result['error'] = sprintf(
+				__( 'Field "%s" does not exist', 'acf-location-shortcodes' ),
+				$field_name
+			);
+			$result['debug'] = array(
+				'field_name'       => $field_name,
+				'post_id'          => $post_id,
+				'available_fields' => $available_fields,
+			);
+
+			ACF_Location_Shortcodes::log(
+				'Field does not exist',
+				$result['debug'],
+				'warning'
+			);
+
+			return $result;
+		}
+
+		// Get field value.
+		$value = get_field( $field_name, $post_id );
+
+		// Check if value is empty and no default provided.
+		if ( empty( $value ) && empty( $default ) ) {
+			$result['error'] = sprintf(
+				__( 'Field "%s" is empty and no default provided', 'acf-location-shortcodes' ),
+				$field_name
+			);
+			$result['debug'] = array(
+				'field_name' => $field_name,
+				'post_id'    => $post_id,
+			);
+
+			ACF_Location_Shortcodes::log(
+				'Field is empty',
+				$result['debug'],
+				'info'
+			);
+
+			return $result;
+		}
+
+		// Success.
+		$result['success'] = true;
+		$result['value']   = ! empty( $value ) ? $value : $default;
+
+		ACF_Location_Shortcodes::log(
+			'Field retrieved successfully',
+			array(
+				'field_name' => $field_name,
+				'post_id'    => $post_id,
+				'has_value'  => ! empty( $value ),
+			),
+			'info'
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Find similar field names using fuzzy matching.
+	 *
+	 * @since 1.1.0
+	 * @param string $field_name     Field name to match.
+	 * @param array  $available_fields Array of available field names.
+	 * @return array Array of similar field names.
+	 */
+	public function find_similar_fields( $field_name, $available_fields ) {
+		if ( empty( $available_fields ) ) {
+			return array();
+		}
+
+		$suggestions = array();
+		$field_name_lower = strtolower( $field_name );
+
+		foreach ( $available_fields as $available_field ) {
+			$available_lower = strtolower( $available_field );
+
+			// Exact match (shouldn't happen, but just in case).
+			if ( $field_name_lower === $available_lower ) {
+				continue;
+			}
+
+			// Check if one contains the other.
+			if ( strpos( $available_lower, $field_name_lower ) !== false ||
+			     strpos( $field_name_lower, $available_lower ) !== false ) {
+				$suggestions[] = $available_field;
+				continue;
+			}
+
+			// Check for similar words.
+			similar_text( $field_name_lower, $available_lower, $percent );
+			if ( $percent > 50 ) {
+				$suggestions[] = $available_field;
+			}
+		}
+
+		// Limit to top 3 suggestions.
+		return array_slice( $suggestions, 0, 3 );
 	}
 }
