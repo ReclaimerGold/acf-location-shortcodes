@@ -21,7 +21,63 @@
 - CHANGELOG.md for version history only
 - No PLAN.md, USAGE.md, ROADMAP.md, or other redundant docs
 
-### 2. MODERN PHP WORDPRESS PLUGIN STANDARDS
+### 2. NEVER CREATE BACKUP FILES
+- **FORBIDDEN:** Do NOT create files like `filename.old`, `filename.bak`, `filename-backup.extension`
+- **FORBIDDEN:** Do NOT rename files to `filename.extension.old` before modifying
+- **CORRECT:** Use the `/workspace/` directory for temporary files, drafts, and experiments
+- **CORRECT:** Rely on Git history for file recovery
+- Delete obsolete files directly - Git maintains history
+- If you need to preserve something temporarily, put it in `/workspace/` (gitignored)
+
+### 3. CONVENTIONAL COMMITS - STRICTLY ENFORCED
+All commit messages MUST follow the Conventional Commits specification:
+
+**Format:**
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Types:**
+- `feat:` - New feature for the user
+- `fix:` - Bug fix for the user
+- `docs:` - Documentation only changes
+- `style:` - Code style changes (formatting, missing semi-colons, etc.)
+- `refactor:` - Code change that neither fixes a bug nor adds a feature
+- `perf:` - Performance improvement
+- `test:` - Adding or updating tests
+- `build:` - Changes to build system or dependencies
+- `ci:` - Changes to CI configuration files and scripts
+- `chore:` - Other changes that don't modify src or test files
+- `revert:` - Reverts a previous commit
+
+**Examples:**
+```bash
+feat: add location_address shortcode
+feat(shortcodes): add automatic parent location lookup
+fix: resolve cache invalidation on post update
+fix(elementor): correct query filter for multiple locations
+docs: update README with installation instructions
+docs(develop): add shortcode creation guide
+refactor: extract field validation into helper method
+perf(cache): implement object caching for communities
+chore: bump version to 2.0.0
+chore(deps): update ACF compatibility to 6.0
+```
+
+**Breaking Changes:**
+Use `!` after type or add `BREAKING CHANGE:` in footer:
+```bash
+feat!: rebrand to ACF Service Management Suite
+refactor!: change text domain from acf-location-shortcodes to acf-sms
+
+BREAKING CHANGE: Text domain changed, translations need update
+```
+
+### 4. MODERN PHP WORDPRESS PLUGIN STANDARDS
 - WordPress 5.8+ / PHP 7.4+ minimum
 - Follow WordPress Coding Standards (WPCS) strictly
 - Singleton pattern for main plugin class
@@ -31,7 +87,7 @@
 - i18n ready with proper text domain
 - Object caching with reasonable expiration (1 hour default)
 
-### 3. SECURITY FIRST
+### 5. SECURITY FIRST
 ```php
 // ALWAYS check capabilities before sensitive operations
 if ( ! current_user_can( 'manage_options' ) ) {
@@ -51,7 +107,7 @@ echo esc_url( $link );
 check_ajax_referer( 'acf_sms_action', 'nonce' );
 ```
 
-### 4. PERFORMANCE OPTIMIZATION
+### 5. PERFORMANCE OPTIMIZATION
 ```php
 // Use WordPress object cache
 $cached = wp_cache_get( $key, 'acf_sms_locations' );
@@ -70,7 +126,7 @@ if ( did_action( 'elementor/loaded' ) ) {
 // Use transients for expensive admin checks
 ```
 
-### 5. ERROR HANDLING PHILOSOPHY
+### 6. ERROR HANDLING PHILOSOPHY
 - Errors must be **actionable** - tell user how to fix it
 - Include **context** - what was attempted, what was found
 - Provide **debug data** when ACF_LS_DEBUG enabled
@@ -104,14 +160,18 @@ acf-service-management-suite/
 ├── assets/
 │   ├── css/shortcodes.css               # Minimal frontend styles
 │   └── js/elementor-controls.js         # Elementor editor controls
+├── workspace/                           # GITIGNORED - temp files, drafts, notes
+│   └── README.md                        # Explains workspace usage
 ├── acf-export-2025-10-28.json           # Field structure (import ready)
 ├── README.md                            # PRIMARY documentation (setup + usage)
 ├── DEVELOP.md                           # Extension/contribution guide
 ├── CHANGELOG.md                         # Version history
-└── copilot-instructions.md              # This file
+├── copilot-instructions.md              # This file
+└── .gitignore                           # Excludes workspace/, *.old, *.bak
 ```
 
 **NO OTHER .md FILES ALLOWED** - Consolidate or delete.
+**NO BACKUP FILES (.old, .bak, -copy) ALLOWED** - Use workspace/ or Git history.
 
 ## Class Architecture
 
@@ -276,7 +336,7 @@ ACF_Location_Shortcodes::log( 'Cache miss', array( 'key' => $cache_key ), 'info'
 return $data;
 ```
 
-## Version Management
+## Version Management & Git Workflow
 
 ### CRITICAL: Version Synchronization Rules
 
@@ -288,6 +348,74 @@ When bumping versions, update in this exact order:
    ### Added
    - Complete post type structure included
    ### Changed
+   - Rebranded to ACF Service Management Suite
+   ```
+
+2. **acf-service-management-suite.php** - Plugin header + constant
+   ```php
+   * Version: 2.0.0
+   define( 'ACF_LS_VERSION', '2.0.0' );
+   ```
+
+3. **README.md** - Badge + Credits section
+   ```markdown
+   [![Version](https://img.shields.io/badge/Version-2.0.0-green)]
+   **Version:** 2.0.0
+   **Last Updated:** October 28, 2025
+   ```
+
+4. **copilot-instructions.md** - Current Version field
+   ```markdown
+   **Current Version:** 2.0.0
+   ```
+
+### Conventional Commits for Versioning
+
+**Version bumps trigger based on commit types:**
+
+- `feat:` commits → Increment **MINOR** version (2.0.0 → 2.1.0)
+- `fix:` commits → Increment **PATCH** version (2.0.0 → 2.0.1)
+- `feat!:` or `BREAKING CHANGE:` → Increment **MAJOR** version (2.0.0 → 3.0.0)
+- `docs:`, `style:`, `refactor:`, `perf:`, `test:`, `chore:` → No version bump (unless bundled with feat/fix)
+
+**Example Version Flow:**
+```bash
+# Current: 2.0.0
+git commit -m "fix: resolve cache invalidation bug"
+# Triggers: 2.0.0 → 2.0.1
+
+git commit -m "feat: add location_distance shortcode"
+# Triggers: 2.0.1 → 2.1.0
+
+git commit -m "feat!: change shortcode attribute names for consistency"
+# Triggers: 2.1.0 → 3.0.0
+```
+
+**Pre-Release Checklist:**
+- [ ] All commits since last release follow Conventional Commits format
+- [ ] CHANGELOG has new version section with categorized changes
+- [ ] All 4 files have matching version numbers
+- [ ] All dates are current date
+- [ ] Git tag created: `git tag -a v2.0.0 -m "chore: release v2.0.0"`
+- [ ] Tag follows conventional commits: `git tag -a v2.0.0 -m "chore(release): version 2.0.0"`
+
+**Semantic Versioning:**
+- **MAJOR** (X.0.0) - Breaking changes (feat!, refactor! with BREAKING CHANGE)
+- **MINOR** (2.X.0) - New features, backwards compatible (feat:)
+- **PATCH** (2.0.X) - Bug fixes, security patches (fix:)
+
+**Commit Message for Version Bumps:**
+```bash
+# When releasing a new version
+git commit -m "chore(release): bump version to 2.1.0
+
+- Updated version in plugin header
+- Updated ACF_LS_VERSION constant
+- Updated README.md version badge
+- Updated copilot-instructions.md"
+
+git tag -a v2.1.0 -m "chore(release): version 2.1.0"
+```
    - Rebranded to ACF Service Management Suite
    ```
 
@@ -323,12 +451,45 @@ When bumping versions, update in this exact order:
 
 ## Development Workflow
 
+### File Handling Rules
+
+**FORBIDDEN - Never Create Backup Files:**
+```bash
+# ❌ WRONG - Do not do this
+mv file.php file.php.old
+cp file.php file.php.backup
+mv file.php file-old.php
+```
+
+**CORRECT - Use Workspace or Git:**
+```bash
+# ✅ CORRECT - For temporary preservation
+cp file.php workspace/file-draft.php
+mv draft.md workspace/planning-notes.md
+
+# ✅ CORRECT - For file history
+git log file.php
+git show HEAD~1:file.php
+git diff HEAD~1 file.php
+
+# ✅ CORRECT - For complete removal
+rm obsolete-file.md  # Git history preserves it
+```
+
+**Workspace Directory Usage:**
+- `/workspace/` is gitignored - safe for local files
+- Use for drafts, experiments, planning notes
+- Use for temporary code before committing
+- Never commit workspace contents
+- Workspace/README.md explains its purpose
+
 ### Before Writing Code
 1. Check if ACF function exists: `if ( ! function_exists( 'get_field' ) )`
 2. Validate post ID and post type
 3. Check field exists before calling `get_field()`
 4. Plan error messages - what will user see?
 5. Consider debug output - what helps troubleshooting?
+6. **Plan conventional commit message** - determines version impact
 
 ### During Development
 1. Follow WPCS (WordPress Coding Standards)
@@ -337,6 +498,8 @@ When bumping versions, update in this exact order:
 4. Test with ACF Free AND Pro
 5. Test with Elementor Free AND Pro
 6. Test on mobile devices
+7. **Keep commits atomic** - one logical change per commit
+8. **Write commit message first** - clarifies what you're building
 
 ### After Code Complete
 1. Run PHP syntax check: `php -l filename.php`
@@ -344,8 +507,30 @@ When bumping versions, update in this exact order:
 3. Test all shortcodes with various attributes
 4. Test Elementor integration with real data
 5. Verify caching works correctly
-6. Update CHANGELOG.md
-7. Bump version numbers (all 4 files)
+6. **Write conventional commit message**
+7. Update CHANGELOG.md if version bump needed
+8. Bump version numbers (all 4 files) if releasing
+
+### Commit Workflow
+```bash
+# 1. Write code for one feature/fix
+# 2. Test thoroughly
+# 3. Stage changes
+git add includes/class-shortcodes.php
+
+# 4. Commit with conventional format
+git commit -m "feat(shortcodes): add location_distance shortcode
+
+- Calculate distance between two locations
+- Support multiple distance units (miles/km)
+- Add caching for distance calculations"
+
+# 5. If this triggers version bump (feat/fix/breaking)
+# Update CHANGELOG.md, version numbers, then:
+git add CHANGELOG.md acf-service-management-suite.php README.md copilot-instructions.md
+git commit -m "chore(release): bump version to 2.1.0"
+git tag -a v2.1.0 -m "chore(release): version 2.1.0"
+```
 
 ## Documentation Standards
 
@@ -483,6 +668,10 @@ Author, company, version, date
 6. **Don't write vague errors** - Be specific and actionable
 7. **Don't forget mobile** - Test responsive layouts
 8. **Don't skip version sync** - Update all 4 files
+9. **NEVER create .old, .bak, or -backup files** - Use workspace/ or Git
+10. **NEVER rename files to .old before editing** - Edit in place, Git tracks history
+11. **ALWAYS use Conventional Commits** - Determines version bumps
+12. **Don't mix commit types** - One feat/fix/docs per commit
 
 ## Testing Checklist
 
@@ -508,11 +697,56 @@ Author, company, version, date
 
 ### When Asked to "Add a Feature"
 1. Determine if it fits plugin scope
-2. Plan class/method structure
-3. Write code following all standards above
-4. Add error handling with actionable messages
-5. Add logging if debug-worthy
-6. Update CHANGELOG.md
+2. **Draft conventional commit message** (determines version impact)
+3. Plan class/method structure
+4. Write code following all standards above
+5. Add error handling with actionable messages
+6. Add logging if debug-worthy
+7. Test thoroughly
+8. **Provide conventional commit message**
+9. Update CHANGELOG.md if version bump needed
+10. Explain usage with example
+11. NO separate planning doc - explain inline
+
+### When Asked to "Fix a Bug"
+1. Ask for error details and context
+2. Review relevant code section
+3. Identify root cause
+4. Implement fix with tests
+5. **Write conventional commit message** (fix: ...)
+6. Add entry to CHANGELOG.md (### Fixed)
+7. Bump PATCH version if releasing
+8. Explain what was wrong and how it's fixed
+
+### When Asked to "Update Documentation"
+1. Determine which file (README, DEVELOP, or CHANGELOG)
+2. Update inline - no new files
+3. Keep language concise and technical
+4. Remove fluff/marketing language
+5. **Use conventional commit** (docs: or docs(readme):)
+6. Ensure version numbers match across files
+7. **NO version bump for docs-only changes**
+
+### When Asked to "Create Documentation"
+1. **STOP** - Ask which existing file to update
+2. Consolidate into README.md or DEVELOP.md
+3. NO new .md files without explicit approval
+4. Inline code documentation via PHPDoc only
+5. **Use conventional commit** (docs: ...)
+
+### When Asked to "Save/Backup a File"
+1. **STOP** - Never create .old, .bak, or backup files
+2. Suggest: "I'll save a copy to workspace/ directory"
+3. Execute: `cp file.php workspace/file-backup-YYYY-MM-DD.php`
+4. Explain: "Git history preserves all versions"
+5. If file is obsolete: Delete it directly
+
+### When Making Any Changes
+1. **Always stage a conventional commit message**
+2. Determine version impact (major/minor/patch/none)
+3. Make changes atomically (one logical change)
+4. Update CHANGELOG.md if needed
+5. Provide complete commit message in output
 7. Provide usage example
 8. NO separate planning doc - explain inline
 

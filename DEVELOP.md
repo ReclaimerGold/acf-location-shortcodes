@@ -1022,21 +1022,60 @@ phpunit
    - Follow coding standards
    - Add comments and documentation
    - Test thoroughly
+   - **Use workspace/ for drafts** (never create .old or .bak files)
 
 4. **Commit Your Changes**
+   
+   **IMPORTANT: Use Conventional Commits Format**
+   
+   Format: `<type>[optional scope]: <description>`
+   
    ```bash
    git add .
-   git commit -m "feat: Add new feature description"
+   git commit -m "feat(shortcodes): add location_distance shortcode"
    ```
    
-   Use conventional commit messages:
-   - `feat:` New feature
-   - `fix:` Bug fix
-   - `docs:` Documentation changes
-   - `style:` Code style changes (formatting)
-   - `refactor:` Code refactoring
-   - `test:` Adding tests
-   - `chore:` Maintenance tasks
+   **Commit Types (determines versioning):**
+   - `feat:` New feature → Minor version bump (1.0.0 → 1.1.0)
+   - `fix:` Bug fix → Patch version bump (1.0.0 → 1.0.1)
+   - `feat!:` Breaking feature → Major version bump (1.0.0 → 2.0.0)
+   - `fix!:` Breaking fix → Major version bump
+   - `docs:` Documentation only → No version bump
+   - `style:` Code formatting → No version bump
+   - `refactor:` Code refactoring → No version bump
+   - `perf:` Performance improvement → No version bump
+   - `test:` Adding tests → No version bump
+   - `chore:` Maintenance → No version bump
+   
+   **Examples:**
+   ```bash
+   # Feature (bumps minor version)
+   git commit -m "feat: add location_distance shortcode"
+   git commit -m "feat(elementor): add distance filter control"
+   
+   # Bug fix (bumps patch version)
+   git commit -m "fix: resolve cache invalidation on post update"
+   git commit -m "fix(shortcodes): correct empty field handling"
+   
+   # Breaking change (bumps major version)
+   git commit -m "feat!: change shortcode attribute names for consistency"
+   git commit -m "refactor!: rename text domain from acf-location-shortcodes to acf-sms"
+   
+   # No version bump
+   git commit -m "docs: update README with installation instructions"
+   git commit -m "style: format code per WPCS"
+   git commit -m "chore: update .gitignore"
+   ```
+   
+   **Multi-line Commits:**
+   ```bash
+   git commit -m "feat(shortcodes): add location_distance shortcode
+
+   - Calculate distance between two locations
+   - Support miles and kilometers
+   - Add caching for performance
+   - Include comprehensive error handling"
+   ```
 
 5. **Push to Your Fork**
    ```bash
@@ -1058,8 +1097,18 @@ Your PR should:
 - [ ] Be tested on multiple environments
 - [ ] Update documentation if needed
 - [ ] Add to CHANGELOG.md (under Unreleased)
-- [ ] Have a clear, descriptive title
+- [ ] Use Conventional Commits format for all commits
+- [ ] Have a clear, descriptive title (using conventional format)
 - [ ] Include a detailed description of changes
+- [ ] **Never include .old, .bak, or backup files**
+
+**PR Title Examples:**
+```
+feat: add location_distance shortcode
+fix: resolve cache invalidation bug
+docs: update installation instructions
+refactor!: change text domain to acf-sms
+```
 
 ### Code Review Process
 
@@ -1085,46 +1134,59 @@ Follow semantic versioning: `MAJOR.MINOR.PATCH`
 
 - [ ] All tests pass
 - [ ] No PHP errors or warnings
-- [ ] Update CHANGELOG.md with all changes
-- [ ] Update version in `acf-location-shortcodes.php` header
+- [ ] All commits follow Conventional Commits format
+- [ ] Update CHANGELOG.md with all changes (categorized by type)
+- [ ] Update version in `acf-service-management-suite.php` header
 - [ ] Update `ACF_LS_VERSION` constant
-- [ ] Update version in README.md
-- [ ] Update version in PLAN.md
+- [ ] Update version in README.md (badge + credits)
 - [ ] Update version in copilot-instructions.md
-- [ ] Update "Last Updated" dates
+- [ ] Update "Last Updated" dates in all docs
+- [ ] Verify version numbers match across all 4 files
 - [ ] Test on multiple environments
-- [ ] Generate production assets (if applicable)
+- [ ] No .old, .bak, or backup files in repository
+- [ ] Clean workspace/ directory (or verify it's gitignored)
 
 ### Release Steps
 
-1. **Update Version Numbers**
+1. **Determine Version Bump**
+   
+   Review commits since last release to determine version:
+   ```bash
+   git log v1.1.0..HEAD --oneline
+   ```
+   
+   - Any `feat!:` or `BREAKING CHANGE:` → **MAJOR** version
+   - Any `feat:` commits → **MINOR** version
+   - Only `fix:` commits → **PATCH** version
+   - Only `docs:`, `chore:`, `style:` → **No version bump** (bundle with next release)
+
+2. **Update Version Numbers**
    ```bash
    # Update all version references (see Pre-Release Checklist)
    ```
 
-2. **Update CHANGELOG.md**
+3. **Update CHANGELOG.md**
+   
+   Organize changes by conventional commit type:
    ```markdown
-   ## [1.2.0] - 2025-11-15
+   ## [2.1.0] - 2025-11-15
    
-   ### Added
-   - New team members shortcode
+   ### Added (from feat: commits)
+   - New location_distance shortcode
    
-   ### Changed
-   - Improved error messages
-   
-   ### Fixed
-   - Cache clearing bug
+   ### Fixed (from fix: commits)
+   - Cache clearing on post update
    ```
 
-3. **Commit Version Bump**
+4. **Commit Version Bump**
    ```bash
-   git add .
-   git commit -m "chore: Bump version to 1.2.0"
+   git add CHANGELOG.md acf-service-management-suite.php README.md copilot-instructions.md
+   git commit -m "chore(release): bump version to 2.1.0"
    ```
 
-4. **Create Git Tag**
+5. **Create Git Tag**
    ```bash
-   git tag -a v1.2.0 -m "Version 1.2.0"
+   git tag -a v2.1.0 -m "chore(release): version 2.1.0"
    git push origin main --tags
    ```
 
