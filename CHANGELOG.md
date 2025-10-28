@@ -34,6 +34,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced `PLAN.md` with v1.1.0 features
 - Added troubleshooting section to documentation (planned)
 
+# Changelog
+
+All notable changes to the ACF Location Shortcodes plugin will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.1.0] - 2025-10-28
+
+### Added
+- **Debug Mode** - New `ACF_LS_DEBUG` constant for verbose error output
+  - Collapsible debug data sections in error messages
+  - Shows post IDs, field names, available fields, and edit links
+  - Only visible to users with `edit_posts` capability
+- **Enhanced Error Messages** - Contextual, actionable error messages
+  - Specific errors for invalid location IDs vs wrong post types
+  - Field name suggestions when fields don't exist
+  - Edit links to fix issues directly
+  - Shows what was provided vs what was expected
+- **Field Validation** - New ACF helper methods for validation
+  - `field_exists()` - Check if ACF field is registered
+  - `get_field_names()` - List all available fields on a post
+  - `get_location_field_validated()` - Structured error returns
+- **Logging System** - Comprehensive logging for debugging
+  - Static `ACF_Location_Shortcodes::log()` method
+  - Log levels: info, warning, error
+  - Logs cache operations, field validations, query modifications
+  - Only logs when `ACF_LS_DEBUG` is enabled
+- **Elementor Query Debugging** - Better visibility into query filtering
+  - Logs when queries are modified by location filter
+  - Shows widget name and selected locations
+  - Field validation warnings in debug mode
+
+### Changed
+- **Error Rendering** - `render_error()` now accepts debug data parameter
+  - Displays collapsible debug information when debug mode enabled
+  - Shows available fields when field not found
+  - Provides edit links and actionable solutions
+- **Communities Shortcode** - Enhanced error messages
+  - Distinguishes between missing ID, wrong post type, and empty field
+  - Shows current post type when validation fails
+  - Suggests available fields if field doesn't exist
+- **Location Info Shortcode** - Better field validation
+  - Lists available fields when requested field doesn't exist
+  - Shows example usage in error messages
+  - Validates field existence before attempting to get value
+- **Location List Shortcode** - Improved error context
+  - Explains parent/child relationship issues
+  - Shows which physical location was found/not found
+  - Clarifies service area vs physical location logic
+- **ACF Helpers** - Added validation and logging throughout
+  - Field existence checks before retrieval
+  - Cache hit/miss logging
+  - Empty value logging with context
+  - Structured error returns with debug data
+
+### Security
+- Debug output only shown to authorized users
+- Debug mode opt-in via constant
+- All logging respects debug flag
+- No sensitive data exposed in debug output
+
+### Performance
+- Debug data only collected when debug mode enabled
+- Logging only when `ACF_LS_DEBUG` is true
+- Field validation cached where appropriate
+- Minimal overhead when debug mode disabled
+
 ## [1.0.0] - 2025-10-27
 
 ### Added

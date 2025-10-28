@@ -316,6 +316,56 @@ if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 
 ## Version Control
 
+### Version Management Guidelines
+
+**CRITICAL: All version numbers and documentation must stay synchronized**
+
+When updating versions, you MUST update these files in this order:
+
+1. **CHANGELOG.md** - Add new version section first
+   - Document all changes under appropriate categories (Added, Changed, Fixed, etc.)
+   - Use format: `## [X.Y.Z] - YYYY-MM-DD`
+   - Be specific and clear about what changed
+
+2. **acf-location-shortcodes.php** - Update plugin header
+   - `Version: X.Y.Z` in plugin header comment
+   - `ACF_LS_VERSION` constant
+   - Must match CHANGELOG.md version exactly
+
+3. **PLAN.md** - Update version and status
+   - Update "Version:" field at bottom
+   - Update "Status:" field
+   - Update "Last Updated:" date
+
+4. **copilot-instructions.md** - Update current version
+   - Update "Current Version:" field
+   - Update "Last Updated:" date
+
+5. **README.md** - Update version references
+   - Update version in credits section
+   - Update "Last Updated:" date
+
+**Version Number Format:**
+- Use semantic versioning: `MAJOR.MINOR.PATCH`
+- MAJOR: Breaking changes
+- MINOR: New features, backwards compatible
+- PATCH: Bug fixes, backwards compatible
+
+**Examples:**
+- `1.0.0` → `1.1.0` (added debugging features)
+- `1.1.0` → `1.1.1` (bug fix)
+- `1.1.1` → `2.0.0` (breaking change)
+
+**Pre-Release Checklist:**
+- [ ] CHANGELOG.md has new version section with all changes
+- [ ] Plugin file version matches CHANGELOG
+- [ ] ACF_LS_VERSION constant updated
+- [ ] PLAN.md version updated
+- [ ] copilot-instructions.md version updated
+- [ ] README.md version updated
+- [ ] All dates match (use current date)
+- [ ] Git tag created: `git tag -a v1.1.0 -m "Version 1.1.0"`
+
 ### Commit Message Format
 ```
 feat: Add community list shortcode
@@ -324,6 +374,7 @@ docs: Update README with examples
 style: Format code per WPCS
 refactor: Optimize ACF data retrieval
 test: Add unit tests for shortcode handler
+chore: Bump version to 1.1.0
 ```
 
 ## Resources
@@ -621,5 +672,5 @@ $debug_data['actions'] = array(
 ---
 
 **Last Updated:** October 28, 2025
-**Current Version:** 1.1.0 (in development)
+**Current Version:** 1.1.0 (Phase 1 & 2 complete - debugging infrastructure and enhanced errors)
 **Primary Developer:** Ryan Reiffenberger

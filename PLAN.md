@@ -318,5 +318,5 @@ acf-location-shortcodes/
 ---
 
 **Version:** 1.1.0  
-**Status:** Complete (v1.0.0) | In Development (v1.1.0)  
+**Status:** Complete (v1.0.0, v1.1.0 - Phase 1 & 2) | In Progress (v1.1.0 - Phase 3-5)  
 **Last Updated:** October 28, 2025
