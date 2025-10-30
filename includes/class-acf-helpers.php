@@ -123,38 +123,66 @@ class ACF_Location_Shortcodes_ACF_Helpers {
 	/**
 	 * Check if a location is a physical location or service area.
 	 *
+	 * A location is physical if it's top-level (no parent) OR has a physical address.
+	 *
 	 * @since 1.0.0
 	 * @param int $post_id Location post ID.
 	 * @return bool True if physical location, false if service area.
 	 */
 	public function is_physical_location( $post_id ) {
-		if ( ! function_exists( 'get_field' ) ) {
-			return false;
-		}
-
 		$post_id = absint( $post_id );
 		if ( ! $post_id ) {
 			return false;
 		}
 
-		$address = get_field( 'address', $post_id );
+		// Get the post object.
+		$post = get_post( $post_id );
+		if ( ! $post || 'location' !== $post->post_type ) {
+			return false;
+		}
 
-		return ! empty( $address );
+		// Top-level locations (no parent) are physical locations.
+		if ( ! $post->post_parent ) {
+			ACF_Location_Shortcodes::log(
+				'Location is physical (top-level)',
+				array( 'post_id' => $post_id ),
+				'info'
+			);
+			return true;
+		}
+
+		// Child locations can be physical if they have an address.
+		if ( function_exists( 'get_field' ) ) {
+			$address = get_field( 'address', $post_id );
+			$is_physical = ! empty( $address );
+
+			ACF_Location_Shortcodes::log(
+				'Location checked for physical address',
+				array(
+					'post_id'     => $post_id,
+					'has_address' => $is_physical,
+					'is_physical' => $is_physical,
+				),
+				'info'
+			);
+
+			return $is_physical;
+		}
+
+		// Fallback: child locations without ACF are service areas.
+		return false;
 	}
 
 	/**
-	 * Get the servicing physical location for a service area.
+	 * Get the parent physical location for a service area.
+	 *
+	 * Uses WordPress hierarchical structure (post_parent).
 	 *
 	 * @since 1.0.0
 	 * @param int $post_id Location post ID.
-	 * @return WP_Post|null Physical location post object or null.
+	 * @return WP_Post|null Parent physical location post object or null.
 	 */
 	public function get_servicing_location( $post_id ) {
-		if ( ! function_exists( 'get_field' ) ) {
-			ACF_Location_Shortcodes::log( 'ACF not available for get_servicing_location', array( 'post_id' => $post_id ), 'warning' );
-			return null;
-		}
-
 		$post_id = absint( $post_id );
 		if ( ! $post_id ) {
 			return null;
@@ -163,30 +191,44 @@ class ACF_Location_Shortcodes_ACF_Helpers {
 		// Only service areas have a servicing location.
 		if ( $this->is_physical_location( $post_id ) ) {
 			ACF_Location_Shortcodes::log(
-				'Post is a physical location, no servicing location',
+				'Post is a physical location, no parent needed',
 				array( 'post_id' => $post_id ),
 				'info'
 			);
 			return null;
 		}
 
-		$servicing_location = get_field( 'servicing_physical_location', $post_id );
-
-		if ( $servicing_location && is_object( $servicing_location ) ) {
+		// Get the parent location using WordPress hierarchy.
+		$post = get_post( $post_id );
+		if ( ! $post || ! $post->post_parent ) {
 			ACF_Location_Shortcodes::log(
-				'Servicing location found',
+				'No parent location found for service area',
+				array( 'post_id' => $post_id ),
+				'warning'
+			);
+			return null;
+		}
+
+		$parent = get_post( $post->post_parent );
+		if ( $parent && 'location' === $parent->post_type ) {
+			ACF_Location_Shortcodes::log(
+				'Parent location found',
 				array(
-					'post_id'            => $post_id,
-					'servicing_location' => $servicing_location->ID,
+					'post_id'         => $post_id,
+					'parent_id'       => $parent->ID,
+					'parent_title'    => $parent->post_title,
 				),
 				'info'
 			);
-			return $servicing_location;
+			return $parent;
 		}
 
 		ACF_Location_Shortcodes::log(
-			'No servicing location found for service area',
-			array( 'post_id' => $post_id ),
+			'Parent post is not a valid location',
+			array(
+				'post_id'    => $post_id,
+				'parent_id'  => $post->post_parent,
+			),
 			'warning'
 		);
 

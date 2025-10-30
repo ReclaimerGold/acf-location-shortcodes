@@ -8,7 +8,7 @@
 **Developer:** Ryan T. M. Reiffenberger (github.com/ReclaimerGold)  
 **License:** GPL v2 or later  
 **Support:** https://github.com/ReclaimerGold/acf-service-management-suite  
-**Current Version:** 2.0.0
+**Current Version:** 2.1.0
 
 ## Core Principles
 

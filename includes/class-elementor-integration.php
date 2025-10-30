@@ -67,9 +67,6 @@ class ACF_Location_Shortcodes_Elementor {
 	 * @param array                  $args    Additional arguments.
 	 */
 	public function add_location_controls( $element, $args ) {
-		// Get all locations for the dropdown.
-		$locations = $this->get_locations_for_control();
-
 		// Add toggle control.
 		$element->add_control(
 			'acf_ls_filter_by_location',
@@ -81,41 +78,7 @@ class ACF_Location_Shortcodes_Elementor {
 				'return_value' => 'yes',
 				'default'      => '',
 				'separator'    => 'before',
-				'description'  => __( 'Filter posts by assigned service location.', 'acf-location-shortcodes' ),
-			)
-		);
-
-		// Add location selection control.
-		$element->add_control(
-			'acf_ls_location_ids',
-			array(
-				'label'       => __( 'Select Locations', 'acf-location-shortcodes' ),
-				'type'        => \Elementor\Controls_Manager::SELECT2,
-				'options'     => $locations,
-				'multiple'    => true,
-				'label_block' => true,
-				'condition'   => array(
-					'acf_ls_filter_by_location' => 'yes',
-				),
-				'description' => __( 'Select one or more locations to filter by. Leave empty to use current location.', 'acf-location-shortcodes' ),
-			)
-		);
-
-		// Add filter mode control.
-		$element->add_control(
-			'acf_ls_filter_mode',
-			array(
-				'label'     => __( 'Filter Mode', 'acf-location-shortcodes' ),
-				'type'      => \Elementor\Controls_Manager::SELECT,
-				'options'   => array(
-					'any' => __( 'Match Any Location (OR)', 'acf-location-shortcodes' ),
-					'all' => __( 'Match All Locations (AND)', 'acf-location-shortcodes' ),
-				),
-				'default'   => 'any',
-				'condition' => array(
-					'acf_ls_filter_by_location' => 'yes',
-					'acf_ls_location_ids!'      => '',
-				),
+				'description'  => __( 'Automatically filter team members by the current location page. If on a service area (child location), shows team members from the parent physical location.', 'acf-location-shortcodes' ),
 			)
 		);
 
@@ -125,7 +88,7 @@ class ACF_Location_Shortcodes_Elementor {
 			array(
 				'label'       => __( 'Location Relationship Field Name', 'acf-location-shortcodes' ),
 				'type'        => \Elementor\Controls_Manager::TEXT,
-				'default'     => 'assigned_location',
+				'default'     => 'location',
 				'description' => __( 'The ACF relationship field name that connects posts to locations.', 'acf-location-shortcodes' ),
 				'condition'   => array(
 					'acf_ls_filter_by_location' => 'yes',
@@ -136,6 +99,9 @@ class ACF_Location_Shortcodes_Elementor {
 
 	/**
 	 * Filter Elementor query by location.
+	 *
+	 * Automatically filters team members based on the current location page.
+	 * If on a service area (child location), uses the parent physical location.
 	 *
 	 * @since 1.0.0
 	 * @param array                  $query_args The query arguments.
@@ -150,51 +116,69 @@ class ACF_Location_Shortcodes_Elementor {
 			return $query_args;
 		}
 
-		// Get location IDs.
-		$location_ids = ! empty( $settings['acf_ls_location_ids'] ) ? $settings['acf_ls_location_ids'] : array();
-
-		// If no locations specified, try to use current post as location.
-		if ( empty( $location_ids ) && is_singular( 'location' ) ) {
-			$location_ids = array( get_the_ID() );
-		}
-
-		// If still no location IDs, return original query.
-		if ( empty( $location_ids ) ) {
+		// Only apply filter on location pages.
+		if ( ! is_singular( 'location' ) ) {
 			ACF_Location_Shortcodes::log(
-				'Elementor filter enabled but no location IDs found',
-				array(
-					'widget'   => $widget->get_name(),
-					'settings' => $settings,
-				),
-				'warning'
-			);
-			return $query_args;
-		}
-
-		// Get filter mode and field name.
-		$filter_mode        = ! empty( $settings['acf_ls_filter_mode'] ) ? $settings['acf_ls_filter_mode'] : 'any';
-		$relationship_field = ! empty( $settings['acf_ls_relationship_field'] ) ? $settings['acf_ls_relationship_field'] : 'assigned_location';
-
-		// Sanitize location IDs.
-		$location_ids = array_map( 'absint', (array) $location_ids );
-		$location_ids = array_filter( $location_ids );
-
-		if ( empty( $location_ids ) ) {
-			ACF_Location_Shortcodes::log(
-				'No valid location IDs after sanitization',
+				'Elementor location filter enabled but not on a location page',
 				array( 'widget' => $widget->get_name() ),
-				'warning'
+				'info'
 			);
 			return $query_args;
 		}
+
+		$current_location_id = get_the_ID();
+		$location_id_to_use  = $current_location_id;
+
+		// Check if current location is a service area (has a parent).
+		if ( ! $this->acf_helpers->is_physical_location( $current_location_id ) ) {
+			// Get the parent physical location.
+			$parent_location = $this->acf_helpers->get_servicing_location( $current_location_id );
+			
+			if ( $parent_location ) {
+				$location_id_to_use = $parent_location->ID;
+				
+				ACF_Location_Shortcodes::log(
+					'Service area detected, using parent physical location',
+					array(
+						'service_area_id'        => $current_location_id,
+						'service_area_title'     => get_the_title( $current_location_id ),
+						'physical_location_id'   => $parent_location->ID,
+						'physical_location_title' => $parent_location->post_title,
+					),
+					'info'
+				);
+			} else {
+				ACF_Location_Shortcodes::log(
+					'Service area has no parent physical location',
+					array(
+						'service_area_id'    => $current_location_id,
+						'service_area_title' => get_the_title( $current_location_id ),
+					),
+					'warning'
+				);
+				return $query_args;
+			}
+		} else {
+			ACF_Location_Shortcodes::log(
+				'Physical location detected, filtering by this location',
+				array(
+					'location_id'    => $current_location_id,
+					'location_title' => get_the_title( $current_location_id ),
+				),
+				'info'
+			);
+		}
+
+		// Get field name from settings.
+		$relationship_field = ! empty( $settings['acf_ls_relationship_field'] ) ? $settings['acf_ls_relationship_field'] : 'location';
 
 		ACF_Location_Shortcodes::log(
 			'Applying Elementor location filter',
 			array(
 				'widget'             => $widget->get_name(),
-				'location_ids'       => $location_ids,
-				'filter_mode'        => $filter_mode,
+				'location_id'        => $location_id_to_use,
 				'relationship_field' => $relationship_field,
+				'post_type'          => isset( $query_args['post_type'] ) ? $query_args['post_type'] : 'not set',
 			),
 			'info'
 		);
@@ -204,69 +188,42 @@ class ACF_Location_Shortcodes_Elementor {
 			$query_args['meta_query'] = array();
 		}
 
-		// Build the meta query.
-		if ( count( $location_ids ) === 1 ) {
-			// Single location - simple query.
-			$query_args['meta_query'][] = array(
-				'key'     => $relationship_field,
-				'value'   => '"' . $location_ids[0] . '"',
-				'compare' => 'LIKE',
-			);
-		} else {
-			// Multiple locations.
-			$location_queries = array();
-
-			foreach ( $location_ids as $location_id ) {
-				$location_queries[] = array(
-					'key'     => $relationship_field,
-					'value'   => '"' . $location_id . '"',
-					'compare' => 'LIKE',
-				);
-			}
-
-			// Add relation based on filter mode.
-			if ( 'all' === $filter_mode ) {
-				$location_queries['relation'] = 'AND';
-			} else {
-				$location_queries['relation'] = 'OR';
-			}
-
-			$query_args['meta_query'][] = $location_queries;
-		}
+		// Build the meta query for the single location.
+		$meta_query_clause = array(
+			'key'     => $relationship_field,
+			'value'   => '"' . $location_id_to_use . '"',
+			'compare' => 'LIKE',
+		);
+		
+		ACF_Location_Shortcodes::log(
+			'Building location meta query',
+			array(
+				'location_id'       => $location_id_to_use,
+				'meta_query_clause' => $meta_query_clause,
+			),
+			'info'
+		);
+		
+		$query_args['meta_query'][] = $meta_query_clause;
 
 		// Set meta_query relation to AND if there are multiple meta queries.
 		if ( count( $query_args['meta_query'] ) > 1 && ! isset( $query_args['meta_query']['relation'] ) ) {
 			$query_args['meta_query']['relation'] = 'AND';
 		}
 
+		ACF_Location_Shortcodes::log(
+			'Final query arguments with location filter',
+			array(
+				'post_type'  => isset( $query_args['post_type'] ) ? $query_args['post_type'] : 'not set',
+				'meta_query' => $query_args['meta_query'],
+			),
+			'info'
+		);
+
 		return $query_args;
 	}
 
-	/**
-	 * Get locations formatted for Elementor control.
-	 *
-	 * @since 1.0.0
-	 * @return array Location options array.
-	 */
-	private function get_locations_for_control() {
-		$locations = $this->acf_helpers->get_all_locations();
-		$options   = array();
 
-		foreach ( $locations as $location ) {
-			$label = $location->post_title;
-
-			// Add indicator for physical vs service area.
-			if ( $this->acf_helpers->is_physical_location( $location->ID ) ) {
-				$label .= ' ' . __( '(Physical Location)', 'acf-location-shortcodes' );
-			} else {
-				$label .= ' ' . __( '(Service Area)', 'acf-location-shortcodes' );
-			}
-
-			$options[ $location->ID ] = $label;
-		}
-
-		return $options;
-	}
 
 	/**
 	 * Enqueue editor scripts.

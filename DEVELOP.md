@@ -6,8 +6,8 @@
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow?logo=git)](https://conventionalcommits.org)
 [![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-purple?logo=php)](https://php.net)
 
-**Version:** 2.0.0  
-**Last Updated:** October 28, 2025
+**Version:** 2.1.0  
+**Last Updated:** October 30, 2025
 
 ---
 

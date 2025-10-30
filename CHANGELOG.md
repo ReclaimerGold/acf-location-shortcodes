@@ -16,6 +16,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2025-10-30
+
+### Changed
+- **Elementor Location Filter** - Improved hierarchical location support
+  - Filter dropdown now shows only physical locations (top-level or with address)
+  - Service areas automatically use parent physical location for filtering
+  - Updated default relationship field from `assigned_location` to `location` for team members
+- **ACF Helpers** - Enhanced location detection logic
+  - `is_physical_location()` now checks WordPress hierarchy (`post_parent`) first
+  - Physical locations are top-level posts OR posts with an address field
+  - `get_servicing_location()` now uses native `post_parent` instead of ACF field
+
+### Fixed
+- Team member filtering on service area pages now correctly uses parent location
+- Physical location detection works even without ACF active (checks hierarchy)
+
+---
+
 ## [2.0.0] - 2025-10-28
 
 ### Added

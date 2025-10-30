@@ -55,7 +55,7 @@
                 "label": "Location",
                 "name": "location",
                 "aria-label": "",
-                "type": "select",
+                "type": "post_object",
                 "instructions": "Which Location is this staff member working at?",
                 "required": 0,
                 "conditional_logic": 0,
@@ -64,23 +64,20 @@
                     "class": "",
                     "id": ""
                 },
-                "choices": {
-                    "Sioux Falls, SD": "Sioux Falls, SD",
-                    "Watertown, SD": "Watertown, SD",
-                    "Sioux City, IA": "Sioux City, IA",
-                    "Fargo, ND": "Fargo, ND",
-                    "Chandler, AZ": "Chandler, AZ"
-                },
-                "default_value": [],
-                "return_format": "value",
+                "post_type": [
+                    "location"
+                ],
+                "post_status": [
+                    "publish"
+                ],
+                "taxonomy": "",
+                "return_format": "object",
                 "multiple": 1,
                 "allow_null": 0,
                 "allow_in_bindings": 0,
+                "bidirectional": 0,
                 "ui": 1,
-                "ajax": 0,
-                "create_options": 0,
-                "placeholder": "",
-                "save_options": 0
+                "bidirectional_target": []
             },
             {
                 "key": "field_68ffb62334d2a",
