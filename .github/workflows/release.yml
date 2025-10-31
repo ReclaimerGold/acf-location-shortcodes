@@ -47,8 +47,8 @@ jobs:
           TAG=${GITHUB_REF#refs/tags/v}
           
           # Check plugin file version
-          PLUGIN_VERSION=$(grep "Version:" acf-location-shortcodes.php | head -1 | sed 's/.*Version: *\([0-9.]*\).*/\1/')
-          CONST_VERSION=$(grep "ACF_LS_VERSION" acf-location-shortcodes.php | sed "s/.*'\([0-9.]*\)'.*/\1/")
+          PLUGIN_VERSION=$(grep "^ \* Version:" acf-location-shortcodes.php | sed 's/.*Version: *//' | tr -d '[:space:]')
+          CONST_VERSION=$(grep "define( 'ACF_LS_VERSION'" acf-location-shortcodes.php | grep -oP "'\K[0-9.]+(?=')")
           
           if [ "$TAG" != "$PLUGIN_VERSION" ]; then
             echo "Error: Tag version ($TAG) doesn't match plugin version ($PLUGIN_VERSION)"
