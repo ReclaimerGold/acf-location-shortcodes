@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: ACF Service Management Suite
- * Plugin URI: https://github.com/ReclaimerGold/acf-service-management-suite
+ * Plugin URI: https://github.com/ReclaimerGold/acf-location-shortcodes
  * Description: Complete service business management for WordPress. Manage locations, service areas, and team members with powerful shortcodes, Elementor integration, and pre-configured ACF post type structure. Perfect for multi-location businesses, service providers, and professional practices. Licensed under GPL v2 or later - https://www.gnu.org/licenses/gpl-2.0.html
  * Version: 2.1.0
  * Requires at least: 5.8

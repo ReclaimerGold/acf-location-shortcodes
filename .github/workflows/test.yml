@@ -65,6 +65,7 @@ jobs:
           if [ ! -f composer.json ]; then
             composer init --no-interaction --name="fallstechgroup/acf-service-management-suite"
           fi
+          composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
           composer require --dev wp-coding-standards/wpcs dealerdirect/phpcodesniffer-composer-installer --no-interaction
 
       - name: Run PHPCS
@@ -95,8 +96,8 @@ jobs:
           fi
           
           # Verify version matches
-          PLUGIN_VERSION=$(grep "Version:" acf-location-shortcodes.php | head -1 | sed 's/.*Version: *\([0-9.]*\).*/\1/')
-          CONST_VERSION=$(grep "ACF_LS_VERSION" acf-location-shortcodes.php | sed "s/.*'\([0-9.]*\)'.*/\1/")
+          PLUGIN_VERSION=$(grep "^ \* Version:" acf-location-shortcodes.php | sed 's/.*Version: *//' | tr -d '[:space:]')
+          CONST_VERSION=$(grep "define( 'ACF_LS_VERSION'" acf-location-shortcodes.php | grep -oP "'\K[0-9.]+(?=')")
           
           if [ "$PLUGIN_VERSION" != "$CONST_VERSION" ]; then
             echo "Error: Plugin version ($PLUGIN_VERSION) doesn't match constant version ($CONST_VERSION)"
