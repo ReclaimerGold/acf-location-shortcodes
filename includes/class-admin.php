@@ -185,6 +185,7 @@ class ACF_Location_Shortcodes_Admin {
 	 */
 	private function render_dashboard_tab() {
 		$acf_active     = $this->is_acf_active();
+		$acf_installed  = $this->is_acf_installed();
 		$template_match = $this->check_template_match();
 
 		?>
@@ -199,10 +200,20 @@ class ACF_Location_Shortcodes_Admin {
 							<span class="dashicons dashicons-yes-alt"></span>
 							<?php esc_html_e( 'Advanced Custom Fields is installed and active.', 'acf-sms' ); ?>
 						</p>
+					<?php elseif ( $acf_installed ) : ?>
+						<p class="acf-sms-status acf-sms-status-error">
+							<span class="dashicons dashicons-warning"></span>
+							<?php esc_html_e( 'Advanced Custom Fields is installed but not active.', 'acf-sms' ); ?>
+						</p>
+						<p>
+							<a href="<?php echo esc_url( $this->get_acf_activate_url() ); ?>" class="button button-primary">
+								<?php esc_html_e( 'Activate ACF Now', 'acf-sms' ); ?>
+							</a>
+						</p>
 					<?php else : ?>
 						<p class="acf-sms-status acf-sms-status-error">
 							<span class="dashicons dashicons-warning"></span>
-							<?php esc_html_e( 'Advanced Custom Fields is not installed or not active.', 'acf-sms' ); ?>
+							<?php esc_html_e( 'Advanced Custom Fields is not installed.', 'acf-sms' ); ?>
 						</p>
 						<p>
 							<a href="<?php echo esc_url( $this->get_acf_install_url() ); ?>" class="button button-primary">
@@ -424,16 +435,27 @@ class ACF_Location_Shortcodes_Admin {
 	 * @since 2.2.0
 	 */
 	private function show_acf_missing_notice() {
+		$acf_installed = $this->is_acf_installed();
+		$message       = $acf_installed 
+			? __( 'Advanced Custom Fields plugin is installed but not activated.', 'acf-sms' )
+			: __( 'Advanced Custom Fields plugin is required but not installed or activated.', 'acf-sms' );
+		
 		?>
 		<div class="notice notice-error is-dismissible acf-sms-notice" data-notice="acf_missing">
 			<p>
 				<strong><?php esc_html_e( 'ACF Service Management Suite:', 'acf-sms' ); ?></strong>
-				<?php esc_html_e( 'Advanced Custom Fields plugin is required but not installed or activated.', 'acf-sms' ); ?>
+				<?php echo esc_html( $message ); ?>
 			</p>
 			<p>
-				<a href="<?php echo esc_url( $this->get_acf_install_url() ); ?>" class="button button-primary">
-					<?php esc_html_e( 'Install ACF Now', 'acf-sms' ); ?>
-				</a>
+				<?php if ( $acf_installed ) : ?>
+					<a href="<?php echo esc_url( $this->get_acf_activate_url() ); ?>" class="button button-primary">
+						<?php esc_html_e( 'Activate ACF Now', 'acf-sms' ); ?>
+					</a>
+				<?php else : ?>
+					<a href="<?php echo esc_url( $this->get_acf_install_url() ); ?>" class="button button-primary">
+						<?php esc_html_e( 'Install ACF Now', 'acf-sms' ); ?>
+					</a>
+				<?php endif; ?>
 				<button type="button" class="button acf-sms-dismiss-notice" data-nonce="<?php echo esc_attr( wp_create_nonce( 'acf_sms_dismiss' ) ); ?>">
 					<?php esc_html_e( 'Dismiss', 'acf-sms' ); ?>
 				</button>
@@ -522,6 +544,22 @@ class ACF_Location_Shortcodes_Admin {
 	}
 
 	/**
+	 * Check if ACF is installed (but not necessarily active).
+	 *
+	 * @since 2.2.0
+	 * @return bool True if ACF is installed.
+	 */
+	private function is_acf_installed() {
+		// Check for ACF Free.
+		$acf_free = WP_PLUGIN_DIR . '/advanced-custom-fields/acf.php';
+		
+		// Check for ACF Pro.
+		$acf_pro = WP_PLUGIN_DIR . '/advanced-custom-fields-pro/acf.php';
+		
+		return file_exists( $acf_free ) || file_exists( $acf_pro );
+	}
+
+	/**
 	 * Check if installed ACF templates match plugin template.
 	 *
 	 * @since 2.2.0
@@ -571,5 +609,32 @@ class ACF_Location_Shortcodes_Admin {
 		}
 		
 		return admin_url( 'plugin-install.php?s=advanced+custom+fields&tab=search&type=term' );
+	}
+
+	/**
+	 * Get URL to activate ACF plugin.
+	 *
+	 * @since 2.2.0
+	 * @return string Activation URL.
+	 */
+	private function get_acf_activate_url() {
+		// Determine which ACF version is installed.
+		$acf_pro  = 'advanced-custom-fields-pro/acf.php';
+		$acf_free = 'advanced-custom-fields/acf.php';
+		
+		$plugin_file = file_exists( WP_PLUGIN_DIR . '/' . $acf_pro ) ? $acf_pro : $acf_free;
+		
+		// Use network admin URL if in network admin context.
+		if ( is_multisite() && is_network_admin() ) {
+			return wp_nonce_url(
+				network_admin_url( 'plugins.php?action=activate&plugin=' . urlencode( $plugin_file ) ),
+				'activate-plugin_' . $plugin_file
+			);
+		}
+		
+		return wp_nonce_url(
+			admin_url( 'plugins.php?action=activate&plugin=' . urlencode( $plugin_file ) ),
+			'activate-plugin_' . $plugin_file
+		);
 	}
 }
