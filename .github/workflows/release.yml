@@ -124,14 +124,14 @@ jobs:
           VERSION="${{ needs.validate-tag.outputs.version }}"
           
           # Create WordPress-style readme.txt
-          cat > build/$SLUG/readme.txt << 'EOF'
+          cat > build/$SLUG/readme.txt <<EOF
 === ACF Service Management Suite ===
 Contributors: fallstechgroup
 Tags: acf, advanced custom fields, shortcodes, locations, services
 Requires at least: 5.8
 Tested up to: 6.4
 Requires PHP: 7.4
-Stable tag: $VERSION
+Stable tag: ${VERSION}
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -143,27 +143,27 @@ ACF Service Management Suite is a comprehensive toolkit that extends Advanced Cu
 
 = Features =
 
-* 🎯 Display specific location information with simple shortcodes
-* 👥 Show team member details anywhere on your site
-* 🗺️ Formatted address display with schema.org markup
-* 🔧 Elementor query filtering integration
-* ⚡ Performance-optimized with intelligent caching
-* 🔒 Security-first design with proper escaping
-* 📱 Fully responsive CSS included
+* Display specific location information with simple shortcodes
+* Show team member details anywhere on your site
+* Formatted address display with schema.org markup
+* Elementor query filtering integration
+* Performance-optimized with intelligent caching
+* Security-first design with proper escaping
+* Fully responsive CSS included
 
 = Shortcodes =
 
-* `[location_field]` - Display any ACF field from a location post
-* `[location_address]` - Show formatted address with schema markup
-* `[location_list]` - Display a list of all locations
-* `[team_member_field]` - Display team member information
+* [location_field] - Display any ACF field from a location post
+* [location_address] - Show formatted address with schema markup
+* [location_list] - Display a list of all locations
+* [team_member_field] - Display team member information
 
 See the full documentation for detailed usage examples.
 
 == Installation ==
 
-1. Upload the plugin files to `/wp-content/plugins/acf-service-management-suite/`
-2. Activate the plugin through the 'Plugins' menu in WordPress
+1. Upload the plugin files to /wp-content/plugins/acf-service-management-suite/
+2. Activate the plugin through the Plugins menu in WordPress
 3. Ensure ACF (Free or Pro) is installed and activated
 4. Import the included ACF field groups (Tools → Import Field Groups)
 5. Create your location and team member posts
@@ -187,17 +187,14 @@ Use the included ACF JSON export file or create your own field groups in ACF.
 
 See CHANGELOG.md for detailed version history.
 
-= $VERSION =
+= ${VERSION} =
 * See CHANGELOG.md for full release notes
 
 == Upgrade Notice ==
 
-= $VERSION =
+= ${VERSION} =
 See CHANGELOG.md for upgrade information.
 EOF
-          
-          # Replace version placeholder
-          sed -i "s/\$VERSION/$VERSION/g" build/$SLUG/readme.txt
           
           echo "✓ WordPress readme.txt created"
 
