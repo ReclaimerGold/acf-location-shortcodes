@@ -6,7 +6,7 @@ Built on Advanced Custom Fields (ACF), this plugin provides powerful shortcodes,
 
 [![WordPress Version](https://img.shields.io/badge/WordPress-5.8%2B-blue?logo=wordpress)](https://wordpress.org)
 [![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-purple?logo=php)](https://php.net)
-[![Version](https://img.shields.io/badge/Version-2.1.0-green)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.2.0-green)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-GPLv2-red)](LICENSE)
 [![Tests](https://github.com/ReclaimerGold/acf-location-shortcodes/actions/workflows/test.yml/badge.svg)](https://github.com/ReclaimerGold/acf-location-shortcodes/actions/workflows/test.yml)
 [![GitHub Issues](https://img.shields.io/github/issues/ReclaimerGold/acf-location-shortcodes)](https://github.com/ReclaimerGold/acf-location-shortcodes/issues)
@@ -19,6 +19,7 @@ Built on Advanced Custom Fields (ACF), this plugin provides powerful shortcodes,
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [Admin Interface](#admin-interface)
 - [Quick Start Guide](#quick-start-guide)
 - [Shortcode Reference](#shortcode-reference)
 - [Usage Examples](#usage-examples)
@@ -188,20 +189,86 @@ wp plugin activate acf-service-management-suite
 
 ---
 
+## Admin Interface
+
+The plugin includes a comprehensive admin interface accessible from **ACF SMS** in your WordPress admin menu.
+
+### Dashboard Tab
+
+**ACF Status Check**
+- Displays whether Advanced Custom Fields is installed and active
+- Provides one-click link to install ACF if missing
+- Shows template sync status
+
+**Template Download**
+- One-click download of the ACF field group template (`acf-template.json`)
+- Version-stamped filename for easy tracking
+- Direct link to ACF import tools when ACF is active
+- Automatic detection of template mismatches
+
+**Quick Links**
+- Manage Locations
+- Manage Team Members
+- ACF Field Groups (when ACF is active)
+- GitHub Repository
+
+### README Tab
+
+Displays this documentation directly in your WordPress admin for easy reference.
+
+### Admin Notices
+
+The plugin shows dismissible notices at the top of WordPress admin when:
+
+**ACF Not Installed**
+- Appears on all admin pages (except plugin settings page)
+- Provides one-click link to install ACF from WordPress.org plugin directory
+- Link includes pre-search query to show ACF first
+- Can be dismissed per user
+
+**Template Mismatch Detected**
+- Appears when installed ACF field groups don't match the plugin template
+- Provides link to download latest template
+- Helps ensure all features work correctly
+- Can be dismissed per user
+
+**How to Access:**
+1. Go to WordPress admin
+2. Click **ACF SMS** in the left sidebar
+3. Use tabs to navigate between Dashboard and README
+
+---
+
 ## Quick Start Guide
 
 ### 🔌 Step 1: Install Dependencies
 
-The plugin requires **Advanced Custom Fields** to function. If ACF is not installed:
+The plugin requires **Advanced Custom Fields** to function. The admin interface will alert you if ACF is not installed.
 
+**Option A: Install via Admin Interface (Easiest)**
+1. Go to **ACF SMS** in your WordPress admin menu
+2. If ACF is not installed, you'll see a warning with an "Install ACF Now" button
+3. Click the button to go directly to the ACF plugin installation page
+4. Click **Install Now**, then **Activate**
+
+**Option B: Manual Installation**
 1. Go to **Plugins > Add New**
 2. Search for "Advanced Custom Fields"
 3. Install and activate ACF Free (or ACF Pro if you have it)
 
 ### 📥 Step 2: Import ACF Field Groups
 
-This plugin includes pre-configured field groups ready to import:
+This plugin includes pre-configured field groups ready to import.
 
+**Option A: Download via Admin Interface (Recommended)**
+1. Go to **ACF SMS > Dashboard** in your WordPress admin
+2. Click the **Download ACF Template** button
+3. The file `acf-template-2.2.0.json` will download
+4. Go to **ACF > Tools > Import Field Groups**
+5. Choose the downloaded JSON file
+6. Click **Import JSON**
+
+**Option B: Manual Import from Plugin Files**
 1. Go to **ACF > Tools**
 2. Click on **Import Field Groups** tab
 3. Choose File: Select `acf-export-2025-10-28.json` from the plugin directory

@@ -10,9 +10,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned Features
-- One-click ACF installation from WordPress.org
 - Additional Elementor editor warnings
-- Admin configuration validation notices
+- Advanced template sync features
+
+---
+
+## [2.2.0] - 2025-10-31
+
+### Added
+- **Admin Interface** - Comprehensive WordPress admin menu at **ACF SMS**
+  - Dashboard tab with ACF status check, template download, and quick links
+  - README tab displaying plugin documentation in admin
+  - One-click download of ACF field group template (`acf-template.json`)
+  - Automatic detection of ACF installation status
+  - Template mismatch detection comparing installed fields to plugin template
+- **Admin Notices** - Global dismissible notifications
+  - Warning when ACF is not installed with one-click install link
+  - Alert when ACF field groups don't match plugin template
+  - Pre-search query link for ACF plugin installation
+  - Per-user dismissal with user meta storage
+- **Admin Assets** - Custom styling and JavaScript
+  - Tabbed interface with WordPress-native design
+  - Status indicators (success, warning, error)
+  - Responsive card-based dashboard layout
+  - Markdown-to-HTML converter for README display
+
+### Changed
+- **Plugin Initialization** - Admin interface always loads, frontend features require ACF
+- **ACF Helpers** - Now instantiated even when ACF is not active (supports admin checks)
+
+---
+
+## [2.1.1] - 2025-10-31
+
+### Fixed
+- **GitHub Workflows** - Multiple CI/CD improvements
+  - Added composer plugin allowance for PHPCS installer
+  - Fixed version extraction regex to prevent capturing extra characters
+  - Updated deprecated artifact actions from v3 to v4
+  - Replaced YAML heredoc with printf statements for readme.txt generation
 
 ---
 

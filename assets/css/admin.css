@@ -1,0 +1,271 @@
+/**
+ * Admin Styles
+ *
+ * @package ACF_Location_Shortcodes
+ * @since 2.2.0
+ */
+
+/* General Admin Page */
+.acf-sms-admin {
+	max-width: 1200px;
+}
+
+.acf-sms-admin .nav-tab-wrapper {
+	margin-bottom: 20px;
+}
+
+.acf-sms-tab-content {
+	background: #fff;
+	padding: 20px;
+	border: 1px solid #ccd0d4;
+	border-top: none;
+}
+
+/* Dashboard Tab */
+.acf-sms-dashboard {
+	padding: 20px 0;
+}
+
+.acf-sms-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: 20px;
+	margin-top: 20px;
+}
+
+.acf-sms-card {
+	background: #fff;
+	border: 1px solid #ccd0d4;
+	padding: 20px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.acf-sms-card h2 {
+	margin-top: 0;
+	font-size: 18px;
+	border-bottom: 1px solid #eee;
+	padding-bottom: 10px;
+	margin-bottom: 15px;
+}
+
+.acf-sms-card p:last-child {
+	margin-bottom: 0;
+}
+
+/* Status Indicators */
+.acf-sms-status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px;
+	border-radius: 4px;
+	margin: 15px 0;
+}
+
+.acf-sms-status .dashicons {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
+.acf-sms-status-success {
+	background: #d4edda;
+	color: #155724;
+	border: 1px solid #c3e6cb;
+}
+
+.acf-sms-status-success .dashicons {
+	color: #28a745;
+}
+
+.acf-sms-status-error {
+	background: #f8d7da;
+	color: #721c24;
+	border: 1px solid #f5c6cb;
+}
+
+.acf-sms-status-error .dashicons {
+	color: #dc3545;
+}
+
+.acf-sms-status-warning {
+	background: #fff3cd;
+	color: #856404;
+	border: 1px solid #ffeaa7;
+}
+
+.acf-sms-status-warning .dashicons {
+	color: #ffc107;
+}
+
+/* Notice Box */
+.acf-sms-notice {
+	padding: 12px;
+	border-radius: 4px;
+	margin: 15px 0;
+}
+
+.acf-sms-notice p {
+	margin: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.acf-sms-notice .dashicons {
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+}
+
+.acf-sms-notice-warning {
+	background: #fff3cd;
+	color: #856404;
+	border: 1px solid #ffeaa7;
+}
+
+/* Buttons */
+.acf-sms-download-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.acf-sms-download-btn .dashicons {
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+	margin-top: -2px;
+}
+
+/* Quick Links */
+.acf-sms-links {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.acf-sms-links li {
+	margin: 0;
+	padding: 0;
+	border-bottom: 1px solid #eee;
+}
+
+.acf-sms-links li:last-child {
+	border-bottom: none;
+}
+
+.acf-sms-links a {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 8px;
+	text-decoration: none;
+	color: #2271b1;
+	transition: all 0.2s;
+}
+
+.acf-sms-links a:hover {
+	background: #f6f7f7;
+	color: #135e96;
+}
+
+.acf-sms-links .dashicons {
+	color: #646970;
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+}
+
+/* README Tab */
+.acf-sms-readme {
+	padding: 20px;
+	line-height: 1.6;
+}
+
+.acf-sms-readme h1 {
+	font-size: 2em;
+	margin-top: 0;
+	border-bottom: 2px solid #ddd;
+	padding-bottom: 10px;
+}
+
+.acf-sms-readme h2 {
+	font-size: 1.5em;
+	margin-top: 30px;
+	border-bottom: 1px solid #eee;
+	padding-bottom: 8px;
+}
+
+.acf-sms-readme h3 {
+	font-size: 1.2em;
+	margin-top: 20px;
+}
+
+.acf-sms-readme code {
+	background: #f6f7f7;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-family: 'Courier New', monospace;
+	font-size: 0.9em;
+}
+
+.acf-sms-readme pre {
+	background: #2c3338;
+	color: #fff;
+	padding: 15px;
+	border-radius: 4px;
+	overflow-x: auto;
+	margin: 15px 0;
+}
+
+.acf-sms-readme pre code {
+	background: transparent;
+	padding: 0;
+	color: #fff;
+}
+
+.acf-sms-readme ul {
+	margin: 15px 0;
+	padding-left: 25px;
+}
+
+.acf-sms-readme li {
+	margin: 8px 0;
+}
+
+.acf-sms-readme a {
+	color: #2271b1;
+	text-decoration: none;
+}
+
+.acf-sms-readme a:hover {
+	color: #135e96;
+	text-decoration: underline;
+}
+
+.acf-sms-readme p {
+	margin: 15px 0;
+}
+
+/* Admin Notices */
+.acf-sms-notice.notice {
+	position: relative;
+	padding-right: 38px;
+}
+
+.acf-sms-notice .acf-sms-dismiss-notice {
+	margin-left: 10px;
+}
+
+/* Responsive */
+@media screen and (max-width: 782px) {
+	.acf-sms-cards {
+		grid-template-columns: 1fr;
+	}
+	
+	.acf-sms-status {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}

@@ -3,7 +3,7 @@
  * Plugin Name: ACF Service Management Suite
  * Plugin URI: https://github.com/ReclaimerGold/acf-location-shortcodes
  * Description: Complete service business management for WordPress. Manage locations, service areas, and team members with powerful shortcodes, Elementor integration, and pre-configured ACF post type structure. Perfect for multi-location businesses, service providers, and professional practices. Licensed under GPL v2 or later - https://www.gnu.org/licenses/gpl-2.0.html
- * Version: 2.1.1
+ * Version: 2.2.0
  * Requires at least: 5.8
  * Requires PHP: 7.4
  * Author: Ryan T. M. Reiffenberger
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants.
-define( 'ACF_LS_VERSION', '2.1.1' );
+define( 'ACF_LS_VERSION', '2.2.0' );
 define( 'ACF_LS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ACF_LS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'ACF_LS_PLUGIN_FILE', __FILE__ );
@@ -68,6 +68,13 @@ class ACF_Location_Shortcodes {
 	 * @var ACF_Location_Shortcodes_Elementor
 	 */
 	public $elementor;
+
+	/**
+	 * Admin interface.
+	 *
+	 * @var ACF_Location_Shortcodes_Admin
+	 */
+	public $admin;
 
 	/**
 	 * Get the singleton instance.
@@ -125,17 +132,24 @@ class ACF_Location_Shortcodes {
 	 * @since 1.0.0
 	 */
 	public function init() {
-		// Don't initialize if ACF is not active.
+		// Load plugin files.
+		$this->includes();
+
+		// Initialize ACF helpers (works without ACF).
+		$this->acf_helpers = new ACF_Location_Shortcodes_ACF_Helpers();
+
+		// Initialize admin interface (always available).
+		if ( is_admin() ) {
+			$this->admin = new ACF_Location_Shortcodes_Admin( $this->acf_helpers );
+		}
+
+		// Don't initialize frontend features if ACF is not active.
 		if ( ! function_exists( 'get_field' ) ) {
 			return;
 		}
 
-		// Load plugin files.
-		$this->includes();
-
-		// Initialize components.
-		$this->acf_helpers = new ACF_Location_Shortcodes_ACF_Helpers();
-		$this->shortcodes  = new ACF_Location_Shortcodes_Shortcodes( $this->acf_helpers );
+		// Initialize frontend components.
+		$this->shortcodes = new ACF_Location_Shortcodes_Shortcodes( $this->acf_helpers );
 
 		// Initialize Elementor integration if Elementor is active.
 		if ( did_action( 'elementor/loaded' ) ) {
@@ -153,11 +167,20 @@ class ACF_Location_Shortcodes {
 	 */
 	private function includes() {
 		require_once ACF_LS_PLUGIN_DIR . 'includes/class-acf-helpers.php';
-		require_once ACF_LS_PLUGIN_DIR . 'includes/class-shortcodes.php';
 
-		// Load Elementor integration only if Elementor is active.
-		if ( did_action( 'elementor/loaded' ) ) {
-			require_once ACF_LS_PLUGIN_DIR . 'includes/class-elementor-integration.php';
+		// Load admin interface if in admin.
+		if ( is_admin() ) {
+			require_once ACF_LS_PLUGIN_DIR . 'includes/class-admin.php';
+		}
+
+		// Load frontend components if ACF is active.
+		if ( function_exists( 'get_field' ) ) {
+			require_once ACF_LS_PLUGIN_DIR . 'includes/class-shortcodes.php';
+
+			// Load Elementor integration only if Elementor is active.
+			if ( did_action( 'elementor/loaded' ) ) {
+				require_once ACF_LS_PLUGIN_DIR . 'includes/class-elementor-integration.php';
+			}
 		}
 	}
 

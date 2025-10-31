@@ -8,7 +8,7 @@
 **Developer:** Ryan T. M. Reiffenberger (github.com/ReclaimerGold)  
 **License:** GPL v2 or later  
 **Support:** https://github.com/ReclaimerGold/acf-service-management-suite  
-**Current Version:** 2.1.0
+**Current Version:** 2.2.0
 
 ## Core Principles
 
@@ -64,14 +64,14 @@ chore:     → NO version bump (unless dependencies change)
 **Example Version Update Workflow:**
 ```bash
 # 1. User requests: "Add team member filtering to Elementor"
-# 2. Determine: feat: (new feature) → MINOR bump (2.0.0 → 2.1.0)
+# 2. Determine: feat: (new feature) → MINOR bump (2.1.0 → 2.2.0)
 
 # 3. Update ALL version files:
-#    - acf-location-shortcodes.php: Version: 2.1.0 + ACF_LS_VERSION = '2.1.0'
-#    - README.md: Version-2.1.0-green
-#    - DEVELOP.md: Version: 2.1.0, Last Updated: [current date]
-#    - copilot-instructions.md: Current Version: 2.1.0
-#    - CHANGELOG.md: Add [2.1.0] - [date] section
+#    - acf-location-shortcodes.php: Version: 2.2.0 + ACF_LS_VERSION = '2.2.0'
+#    - README.md: Version-2.2.0-green
+#    - DEVELOP.md: Version: 2.2.0, Last Updated: [current date]
+#    - copilot-instructions.md: Current Version: 2.2.0
+#    - CHANGELOG.md: Add [2.2.0] - [date] section
 
 # 4. Make code changes
 # 5. Commit: "feat: add hierarchical location support for Elementor filters"
@@ -79,7 +79,7 @@ chore:     → NO version bump (unless dependencies change)
 
 **CHANGELOG.md Format:**
 ```markdown
-## [2.1.0] - 2025-10-30
+## [2.2.0] - 2025-10-31
 
 ### Added
 - Hierarchical location support in Elementor filters
@@ -524,34 +524,34 @@ When bumping versions, update in this exact order:
 
 2. **acf-service-management-suite.php** - Plugin header + constant
    ```php
-   * Version: 2.1.0
-   define( 'ACF_LS_VERSION', '2.1.0' );
+   * Version: 2.2.0
+   define( 'ACF_LS_VERSION', '2.2.0' );
    ```
 
 3. **README.md** - Badge + Credits section
    ```markdown
-   [![Version](https://img.shields.io/badge/Version-2.1.0-green)]
-   **Version:** 2.1.0
-   **Last Updated:** October 30, 2025
+   [![Version](https://img.shields.io/badge/Version-2.2.0-green)]
+   **Version:** 2.2.0
+   **Last Updated:** October 31, 2025
    ```
 
 4. **copilot-instructions.md** - Current Version field
    ```markdown
-   **Current Version:** 2.1.0
+   **Current Version:** 2.2.0
    ```
 
 ### Conventional Commits for Versioning
 
 **Version bumps trigger based on commit types:**
 
-- `feat:` commits → Increment **MINOR** version (2.0.0 → 2.1.0)
-- `fix:` commits → Increment **PATCH** version (2.0.0 → 2.0.1)
+- `feat:` commits → Increment **MINOR** version (2.1.0 → 2.2.0)
+- `fix:` commits → Increment **PATCH** version (2.1.0 → 2.1.1)
 - `feat!:` or `BREAKING CHANGE:` → Increment **MAJOR** version (2.0.0 → 3.0.0)
 - `docs:`, `style:`, `refactor:`, `perf:`, `test:`, `chore:` → No version bump (unless bundled with feat/fix)
 
 **Example Version Flow:**
 ```bash
-# Current: 2.1.0
+# Current: 2.2.0
 git commit -m "fix: resolve cache invalidation bug"
 # Triggers: 2.1.0 → 2.1.1
 
@@ -592,27 +592,27 @@ git tag -a v2.1.0 -m "chore(release): version 2.1.0"
 
 2. **acf-service-management-suite.php** - Plugin header + constant
    ```php
-   * Version: 2.1.0
-   define( 'ACF_LS_VERSION', '2.1.0' );
+   * Version: 2.2.0
+   define( 'ACF_LS_VERSION', '2.2.0' );
    ```
 
 3. **README.md** - Badge + Credits section
    ```markdown
-   [![Version](https://img.shields.io/badge/Version-2.1.0-green)]
-   **Version:** 2.1.0
-   **Last Updated:** October 30, 2025
+   [![Version](https://img.shields.io/badge/Version-2.2.0-green)]
+   **Version:** 2.2.0
+   **Last Updated:** October 31, 2025
    ```
 
 4. **copilot-instructions.md** - Current Version field
    ```markdown
-   **Current Version:** 2.1.0
+   **Current Version:** 2.2.0
    ```
 
 **Pre-Release Checklist:**
 - [ ] All 4 files have matching version numbers
 - [ ] CHANGELOG has complete list of changes
 - [ ] All dates are current date
-- [ ] Git tag created: `git tag -a v2.1.0 -m "Version 2.1.0"`
+- [ ] Git tag created: `git tag -a v2.2.0 -m "Version 2.2.0"`
 - [ ] README credits updated with correct version
 
 **Semantic Versioning:**
