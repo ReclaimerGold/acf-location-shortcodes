@@ -62,8 +62,11 @@ class ACF_Location_Shortcodes_Admin {
 		// Admin menu.
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 
-		// Admin notices.
+		// Admin notices (single-site and per-site in multisite).
 		add_action( 'admin_notices', array( $this, 'show_acf_notices' ) );
+
+		// Network admin notices (multisite).
+		add_action( 'network_admin_notices', array( $this, 'show_acf_notices' ) );
 
 		// AJAX handlers.
 		add_action( 'wp_ajax_acf_sms_dismiss_notice', array( $this, 'ajax_dismiss_notice' ) );
@@ -562,6 +565,11 @@ class ACF_Location_Shortcodes_Admin {
 	 * @return string Install URL.
 	 */
 	private function get_acf_install_url() {
+		// Use network admin URL if in network admin context.
+		if ( is_multisite() && is_network_admin() ) {
+			return network_admin_url( 'plugin-install.php?s=advanced+custom+fields&tab=search&type=term' );
+		}
+		
 		return admin_url( 'plugin-install.php?s=advanced+custom+fields&tab=search&type=term' );
 	}
 }
