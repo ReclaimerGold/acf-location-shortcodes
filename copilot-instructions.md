@@ -359,7 +359,34 @@ class ACF_Location_Shortcodes {
 
 ## ACF Field Reference
 
+**⚠️ CRITICAL: Always reference the master ACF template file for field structure.**
+
+**Master Reference:** `/acf-import-templates/acf-template.json`
+
+This file contains the **complete, authoritative definition** of:
+- All post types (location, team-member)
+- All custom fields with exact field names, types, and configurations
+- All taxonomies (team-member-type)
+- Field groups and their attachment rules
+- Conditional logic and field relationships
+
+**When working with ACF fields:**
+1. **ALWAYS** check `acf-template.json` for the exact field name
+2. **NEVER** assume field names - verify against the template
+3. **ALWAYS** use the correct field type (text, post_object, relationship, etc.)
+4. **ALWAYS** respect field return formats (object vs ID vs array)
+5. **UPDATE** the template file when adding new fields
+
+**Field Name Verification:**
+```bash
+# Example: Finding a field in the template
+grep -A 5 '"name": "field_name"' acf-import-templates/acf-template.json
+```
+
 ### Location Post Type Fields (11)
+
+Defined in: `acf-import-templates/acf-template.json` → Field Group: "Location Details"
+
 - `service_area_shorthand` (Text) - "Sioux Falls, SD"
 - `address` (Text) - Physical address (empty = service area)
 - `phone_number` (Text) - Contact number
@@ -373,9 +400,12 @@ class ACF_Location_Shortcodes {
 - `team_members_assigned` (Relationship) - Team members
 
 ### Team Member Post Type Fields (4)
-- `profile_picture` (Image) - Photo
+
+Defined in: `acf-import-templates/acf-template.json` → Field Group: "Team Member Details"
+
+- `profile_picture` (Image) - Photo (return format: array)
 - `title` (Text) - Job title
-- `location` (Select Multiple) - Assigned locations
+- `location` (Post Object, Multiple) - Assigned locations (return format: object)
 - `full_profile_url` (URL) - Full bio link
 
 **Location Type Logic:**
