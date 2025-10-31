@@ -6,7 +6,7 @@
  * Version: 2.1.0
  * Requires at least: 5.8
  * Requires PHP: 7.4
- * Author: Falls Technology Group, LLC
+ * Author: Ryan T. M. Reiffenberger
  * Author URI: https://github.com/ReclaimerGold
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -15,7 +15,7 @@
  *
  * @package ACF_Service_Management_Suite
  * @author Ryan T. M. Reiffenberger
- * @copyright 2025 Falls Technology Group, LLC
+ * @copyright 2025 Ryan T. M. Reiffenberger
  */
 
 // Exit if accessed directly.
