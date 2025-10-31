@@ -30,6 +30,71 @@
 - If you need to preserve something temporarily, put it in `/workspace/` (gitignored)
 
 ### 3. CONVENTIONAL COMMITS - STRICTLY ENFORCED
+
+**⚠️ CRITICAL: ALL code changes MUST include proper version management following Conventional Commits.**
+
+#### Version Management Rules
+
+**BEFORE making ANY code changes:**
+1. Determine the commit type and version impact
+2. Update version in ALL required files TOGETHER
+3. Add CHANGELOG entry for the new version
+4. NEVER commit code changes without updating versions
+
+**Required Version Update Files (MUST ALL BE UPDATED TOGETHER):**
+- `acf-location-shortcodes.php` - Plugin header `Version:` AND `ACF_LS_VERSION` constant
+- `README.md` - Version badge
+- `DEVELOP.md` - Version and Last Updated date
+- `copilot-instructions.md` - Current Version
+- `CHANGELOG.md` - New version entry with changes
+
+**Version Determination:**
+```
+feat:      → MINOR version bump (2.0.0 → 2.1.0)
+feat!:     → MAJOR version bump (2.0.0 → 3.0.0)
+fix:       → PATCH version bump (2.0.0 → 2.0.1)
+docs:      → NO version bump (documentation only)
+style:     → NO version bump (formatting only)
+refactor:  → NO version bump (unless behavior changes)
+perf:      → PATCH version bump (2.0.0 → 2.0.1)
+test:      → NO version bump (tests only)
+chore:     → NO version bump (unless dependencies change)
+```
+
+**Example Version Update Workflow:**
+```bash
+# 1. User requests: "Add team member filtering to Elementor"
+# 2. Determine: feat: (new feature) → MINOR bump (2.0.0 → 2.1.0)
+
+# 3. Update ALL version files:
+#    - acf-location-shortcodes.php: Version: 2.1.0 + ACF_LS_VERSION = '2.1.0'
+#    - README.md: Version-2.1.0-green
+#    - DEVELOP.md: Version: 2.1.0, Last Updated: [current date]
+#    - copilot-instructions.md: Current Version: 2.1.0
+#    - CHANGELOG.md: Add [2.1.0] - [date] section
+
+# 4. Make code changes
+# 5. Commit: "feat: add hierarchical location support for Elementor filters"
+```
+
+**CHANGELOG.md Format:**
+```markdown
+## [2.1.0] - 2025-10-30
+
+### Added
+- Hierarchical location support in Elementor filters
+- Team member filtering by parent location for service areas
+
+### Changed
+- Filter dropdown now shows only physical locations
+- Automatic parent detection for service area pages
+
+### Fixed
+- Team member queries on service area pages
+```
+
+#### Conventional Commits Specification
+
 All commit messages MUST follow the Conventional Commits specification:
 
 **Format:**
@@ -42,40 +107,93 @@ All commit messages MUST follow the Conventional Commits specification:
 ```
 
 **Types:**
-- `feat:` - New feature for the user
-- `fix:` - Bug fix for the user
-- `docs:` - Documentation only changes
-- `style:` - Code style changes (formatting, missing semi-colons, etc.)
-- `refactor:` - Code change that neither fixes a bug nor adds a feature
-- `perf:` - Performance improvement
-- `test:` - Adding or updating tests
-- `build:` - Changes to build system or dependencies
-- `ci:` - Changes to CI configuration files and scripts
-- `chore:` - Other changes that don't modify src or test files
-- `revert:` - Reverts a previous commit
+- `feat:` - New feature for the user (MINOR version bump)
+- `fix:` - Bug fix for the user (PATCH version bump)
+- `docs:` - Documentation only changes (NO version bump)
+- `style:` - Code style changes (formatting, missing semi-colons, etc.) (NO version bump)
+- `refactor:` - Code change that neither fixes a bug nor adds a feature (NO version bump)
+- `perf:` - Performance improvement (PATCH version bump)
+- `test:` - Adding or updating tests (NO version bump)
+- `build:` - Changes to build system or dependencies (NO version bump)
+- `ci:` - Changes to CI configuration files and scripts (NO version bump)
+- `chore:` - Other changes that don't modify src or test files (NO version bump)
+- `revert:` - Reverts a previous commit (depends on reverted change)
+
+**Scopes (optional but recommended):**
+```
+feat(shortcodes): add location_address shortcode
+fix(elementor): correct query filter for service areas
+docs(readme): update installation instructions
+perf(cache): implement object caching for communities
+```
 
 **Examples:**
 ```bash
-feat: add location_address shortcode
-feat(shortcodes): add automatic parent location lookup
+# MINOR version bump (2.0.0 → 2.1.0)
+feat: add automatic parent location detection
+feat(elementor): add team member filtering by location
+
+# PATCH version bump (2.0.0 → 2.0.1)
 fix: resolve cache invalidation on post update
-fix(elementor): correct query filter for multiple locations
-docs: update README with installation instructions
-docs(develop): add shortcode creation guide
-refactor: extract field validation into helper method
-perf(cache): implement object caching for communities
-chore: bump version to 2.0.0
-chore(deps): update ACF compatibility to 6.0
+fix(shortcodes): handle missing ACF fields gracefully
+perf(queries): optimize location hierarchy lookups
+
+# NO version bump
+docs: update README with Elementor usage examples
+docs(develop): add contribution guidelines
+style: format code to WordPress standards
+refactor: extract validation into helper method
+test: add unit tests for ACF helpers
+chore: update .gitignore patterns
 ```
 
-**Breaking Changes:**
+**Breaking Changes (MAJOR version bump):**
 Use `!` after type or add `BREAKING CHANGE:` in footer:
 ```bash
+# MAJOR version bump (2.0.0 → 3.0.0)
 feat!: rebrand to ACF Service Management Suite
 refactor!: change text domain from acf-location-shortcodes to acf-sms
 
-BREAKING CHANGE: Text domain changed, translations need update
+BREAKING CHANGE: Text domain changed, existing translations need update
 ```
+
+#### AI Assistant Version Management Behavior
+
+**When user requests code changes:**
+1. **ALWAYS ask yourself:** "What type of change is this?" (feat/fix/docs/etc.)
+2. **ALWAYS determine version impact:** Major/Minor/Patch/None
+3. **ALWAYS update ALL version files together** before completing the task
+4. **ALWAYS add CHANGELOG entry** with the new version
+5. **ALWAYS mention version bump** in your response to user
+
+**Version Consistency Check:**
+Before completing any task, verify ALL these match:
+- Plugin header `Version:`
+- `ACF_LS_VERSION` constant
+- README.md badge
+- DEVELOP.md version + date
+- copilot-instructions.md current version
+- CHANGELOG.md latest entry
+
+**If versions are inconsistent:** Stop and fix ALL files before proceeding.
+
+#### Release Process
+
+**Creating a release:**
+```bash
+# After committing changes with proper version bumps:
+git tag v2.1.0
+git push origin v2.1.0
+
+# GitHub Actions will automatically:
+# - Run tests
+# - Build release ZIP
+# - Create GitHub Release
+# - Generate release notes from CHANGELOG
+```
+
+**Tag Format:** `vMAJOR.MINOR.PATCH` (e.g., `v2.1.0`)
+**NEVER** create tags without updating versions first.
 
 ### 4. MODERN PHP WORDPRESS PLUGIN STANDARDS
 - WordPress 5.8+ / PHP 7.4+ minimum
@@ -376,20 +494,20 @@ When bumping versions, update in this exact order:
 
 2. **acf-service-management-suite.php** - Plugin header + constant
    ```php
-   * Version: 2.0.0
-   define( 'ACF_LS_VERSION', '2.0.0' );
+   * Version: 2.1.0
+   define( 'ACF_LS_VERSION', '2.1.0' );
    ```
 
 3. **README.md** - Badge + Credits section
    ```markdown
-   [![Version](https://img.shields.io/badge/Version-2.0.0-green)]
-   **Version:** 2.0.0
-   **Last Updated:** October 28, 2025
+   [![Version](https://img.shields.io/badge/Version-2.1.0-green)]
+   **Version:** 2.1.0
+   **Last Updated:** October 30, 2025
    ```
 
 4. **copilot-instructions.md** - Current Version field
    ```markdown
-   **Current Version:** 2.0.0
+   **Current Version:** 2.1.0
    ```
 
 ### Conventional Commits for Versioning
@@ -403,12 +521,12 @@ When bumping versions, update in this exact order:
 
 **Example Version Flow:**
 ```bash
-# Current: 2.0.0
+# Current: 2.1.0
 git commit -m "fix: resolve cache invalidation bug"
-# Triggers: 2.0.0 → 2.0.1
+# Triggers: 2.1.0 → 2.1.1
 
 git commit -m "feat: add location_distance shortcode"
-# Triggers: 2.0.1 → 2.1.0
+# Triggers: 2.1.1 → 2.2.0
 
 git commit -m "feat!: change shortcode attribute names for consistency"
 # Triggers: 2.1.0 → 3.0.0
@@ -444,27 +562,27 @@ git tag -a v2.1.0 -m "chore(release): version 2.1.0"
 
 2. **acf-service-management-suite.php** - Plugin header + constant
    ```php
-   * Version: 2.0.0
-   define( 'ACF_LS_VERSION', '2.0.0' );
+   * Version: 2.1.0
+   define( 'ACF_LS_VERSION', '2.1.0' );
    ```
 
 3. **README.md** - Badge + Credits section
    ```markdown
-   [![Version](https://img.shields.io/badge/Version-2.0.0-green)]
-   **Version:** 2.0.0
-   **Last Updated:** October 28, 2025
+   [![Version](https://img.shields.io/badge/Version-2.1.0-green)]
+   **Version:** 2.1.0
+   **Last Updated:** October 30, 2025
    ```
 
 4. **copilot-instructions.md** - Current Version field
    ```markdown
-   **Current Version:** 2.0.0
+   **Current Version:** 2.1.0
    ```
 
 **Pre-Release Checklist:**
 - [ ] All 4 files have matching version numbers
 - [ ] CHANGELOG has complete list of changes
 - [ ] All dates are current date
-- [ ] Git tag created: `git tag -a v2.0.0 -m "Version 2.0.0"`
+- [ ] Git tag created: `git tag -a v2.1.0 -m "Version 2.1.0"`
 - [ ] README credits updated with correct version
 
 **Semantic Versioning:**
