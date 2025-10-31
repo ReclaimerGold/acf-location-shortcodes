@@ -123,78 +123,54 @@ jobs:
           SLUG="${{ steps.slug.outputs.slug }}"
           VERSION="${{ needs.validate-tag.outputs.version }}"
           
-          # Create WordPress-style readme.txt
-          cat > build/$SLUG/readme.txt <<EOF
-=== ACF Service Management Suite ===
-Contributors: fallstechgroup
-Tags: acf, advanced custom fields, shortcodes, locations, services
-Requires at least: 5.8
-Tested up to: 6.4
-Requires PHP: 7.4
-Stable tag: ${VERSION}
-License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
-
-Powerful shortcode toolkit for ACF-powered WordPress sites. Display locations, team members, and custom field data anywhere.
-
-== Description ==
-
-ACF Service Management Suite is a comprehensive toolkit that extends Advanced Custom Fields with powerful shortcodes for displaying location data, team members, and custom field information throughout your WordPress site.
-
-= Features =
-
-* Display specific location information with simple shortcodes
-* Show team member details anywhere on your site
-* Formatted address display with schema.org markup
-* Elementor query filtering integration
-* Performance-optimized with intelligent caching
-* Security-first design with proper escaping
-* Fully responsive CSS included
-
-= Shortcodes =
-
-* [location_field] - Display any ACF field from a location post
-* [location_address] - Show formatted address with schema markup
-* [location_list] - Display a list of all locations
-* [team_member_field] - Display team member information
-
-See the full documentation for detailed usage examples.
-
-== Installation ==
-
-1. Upload the plugin files to /wp-content/plugins/acf-service-management-suite/
-2. Activate the plugin through the Plugins menu in WordPress
-3. Ensure ACF (Free or Pro) is installed and activated
-4. Import the included ACF field groups (Tools → Import Field Groups)
-5. Create your location and team member posts
-6. Use shortcodes anywhere on your site
-
-== Frequently Asked Questions ==
-
-= Does this plugin require ACF Pro? =
-
-No, it works with both ACF Free and ACF Pro. However, some features may require ACF Pro.
-
-= Can I use this with Elementor? =
-
-Yes! The plugin includes Elementor integration for query filtering.
-
-= How do I add custom fields? =
-
-Use the included ACF JSON export file or create your own field groups in ACF.
-
-== Changelog ==
-
-See CHANGELOG.md for detailed version history.
-
-= ${VERSION} =
-* See CHANGELOG.md for full release notes
-
-== Upgrade Notice ==
-
-= ${VERSION} =
-See CHANGELOG.md for upgrade information.
-EOF
+          # Create WordPress-style readme.txt using printf for better compatibility
+          printf "=== ACF Service Management Suite ===\n" > build/$SLUG/readme.txt
+          printf "Contributors: fallstechgroup\n" >> build/$SLUG/readme.txt
+          printf "Tags: acf, advanced custom fields, shortcodes, locations, services\n" >> build/$SLUG/readme.txt
+          printf "Requires at least: 5.8\n" >> build/$SLUG/readme.txt
+          printf "Tested up to: 6.4\n" >> build/$SLUG/readme.txt
+          printf "Requires PHP: 7.4\n" >> build/$SLUG/readme.txt
+          printf "Stable tag: %s\n" "$VERSION" >> build/$SLUG/readme.txt
+          printf "License: GPLv2 or later\n" >> build/$SLUG/readme.txt
+          printf "License URI: https://www.gnu.org/licenses/gpl-2.0.html\n\n" >> build/$SLUG/readme.txt
+          printf "Powerful shortcode toolkit for ACF-powered WordPress sites. Display locations, team members, and custom field data anywhere.\n\n" >> build/$SLUG/readme.txt
+          printf "== Description ==\n\n" >> build/$SLUG/readme.txt
+          printf "ACF Service Management Suite is a comprehensive toolkit that extends Advanced Custom Fields with powerful shortcodes for displaying location data, team members, and custom field information throughout your WordPress site.\n\n" >> build/$SLUG/readme.txt
+          printf "= Features =\n\n" >> build/$SLUG/readme.txt
+          printf "* Display specific location information with simple shortcodes\n" >> build/$SLUG/readme.txt
+          printf "* Show team member details anywhere on your site\n" >> build/$SLUG/readme.txt
+          printf "* Formatted address display with schema.org markup\n" >> build/$SLUG/readme.txt
+          printf "* Elementor query filtering integration\n" >> build/$SLUG/readme.txt
+          printf "* Performance-optimized with intelligent caching\n" >> build/$SLUG/readme.txt
+          printf "* Security-first design with proper escaping\n" >> build/$SLUG/readme.txt
+          printf "* Fully responsive CSS included\n\n" >> build/$SLUG/readme.txt
+          printf "= Shortcodes =\n\n" >> build/$SLUG/readme.txt
+          printf "* [location_field] - Display any ACF field from a location post\n" >> build/$SLUG/readme.txt
+          printf "* [location_address] - Show formatted address with schema markup\n" >> build/$SLUG/readme.txt
+          printf "* [location_list] - Display a list of all locations\n" >> build/$SLUG/readme.txt
+          printf "* [team_member_field] - Display team member information\n\n" >> build/$SLUG/readme.txt
+          printf "See the full documentation for detailed usage examples.\n\n" >> build/$SLUG/readme.txt
+          printf "== Installation ==\n\n" >> build/$SLUG/readme.txt
+          printf "1. Upload the plugin files to /wp-content/plugins/acf-service-management-suite/\n" >> build/$SLUG/readme.txt
+          printf "2. Activate the plugin through the Plugins menu in WordPress\n" >> build/$SLUG/readme.txt
+          printf "3. Ensure ACF (Free or Pro) is installed and activated\n" >> build/$SLUG/readme.txt
+          printf "4. Import the included ACF field groups (Tools -> Import Field Groups)\n" >> build/$SLUG/readme.txt
+          printf "5. Create your location and team member posts\n" >> build/$SLUG/readme.txt
+          printf "6. Use shortcodes anywhere on your site\n\n" >> build/$SLUG/readme.txt
+          printf "== Frequently Asked Questions ==\n\n" >> build/$SLUG/readme.txt
+          printf "= Does this plugin require ACF Pro? =\n\n" >> build/$SLUG/readme.txt
+          printf "No, it works with both ACF Free and ACF Pro. However, some features may require ACF Pro.\n\n" >> build/$SLUG/readme.txt
+          printf "= Can I use this with Elementor? =\n\n" >> build/$SLUG/readme.txt
+          printf "Yes! The plugin includes Elementor integration for query filtering.\n\n" >> build/$SLUG/readme.txt
+          printf "= How do I add custom fields? =\n\n" >> build/$SLUG/readme.txt
+          printf "Use the included ACF JSON export file or create your own field groups in ACF.\n\n" >> build/$SLUG/readme.txt
+          printf "== Changelog ==\n\n" >> build/$SLUG/readme.txt
+          printf "See CHANGELOG.md for detailed version history.\n\n" >> build/$SLUG/readme.txt
+          printf "= %s =\n" "$VERSION" >> build/$SLUG/readme.txt
+          printf "* See CHANGELOG.md for full release notes\n\n" >> build/$SLUG/readme.txt
+          printf "== Upgrade Notice ==\n\n" >> build/$SLUG/readme.txt
+          printf "= %s =\n" "$VERSION" >> build/$SLUG/readme.txt
+          printf "See CHANGELOG.md for upgrade information.\n" >> build/$SLUG/readme.txt
           
           echo "✓ WordPress readme.txt created"
 
