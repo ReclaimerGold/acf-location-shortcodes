@@ -829,6 +829,321 @@ Author, company, version, date
 - [ ] AJAX requests verify nonce
 - [ ] Use `wp_create_nonce()` and `check_ajax_referer()`
 
+## Unit Testing Standards
+
+### Testing Framework
+
+**Required Stack:**
+- PHPUnit 9.5+ for test execution
+- Brain Monkey for WordPress function mocking
+- Mockery for class mocking
+- Code coverage target: 80%+ for critical paths
+
+**Test Structure:**
+```
+tests/
+├── bootstrap.php              # Test suite bootstrap
+├── TestCase.php               # Base test case with helpers
+├── README.md                  # Complete testing documentation
+├── mocks/
+│   └── wordpress-functions.php # WordPress function mocks
+├── Unit/
+│   └── [ClassName]Test.php    # One test file per class
+└── Integration/
+    └── [Feature]Test.php      # Integration tests
+```
+
+### Test Naming Conventions
+
+**Files:** `[ClassName]Test.php`
+- Examples: `ACFHelpersTest.php`, `ShortcodesTest.php`, `MultisiteSyncTest.php`
+
+**Classes:** `[ClassName]Test extends TestCase`
+- Namespace: `ACF_SMS\Tests\Unit` or `ACF_SMS\Tests\Integration`
+
+**Methods:** `test_[method]_[scenario]_[expected]`
+- Examples:
+  - `test_parse_comma_list_with_valid_input()`
+  - `test_get_location_field_returns_default_when_empty()`
+  - `test_shortcode_renders_error_for_invalid_post_type()`
+
+### Writing Tests - The TDD Cycle
+
+**CRITICAL: Follow Test-Driven Development for ALL new features and bug fixes.**
+
+**Step 1: Write Failing Test First**
+```php
+public function test_new_shortcode_renders_phone_number() {
+    // Arrange
+    $this->acf_helpers->shouldReceive( 'get_location_field' )
+        ->with( 'phone_number', 123, '' )
+        ->andReturn( '(605) 555-1234' );
+    
+    // Act
+    $result = $this->shortcodes->location_phone( array() );
+    
+    // Assert
+    $this->assertStringContainsString( '(605) 555-1234', $result );
+    $this->assertNotContainsError( $result );
+}
+```
+
+**Step 2: Run Test - Verify It Fails**
+```bash
+./vendor/bin/phpunit --filter test_new_shortcode
+# Expected: FAIL (method doesn't exist)
+```
+
+**Step 3: Implement Minimum Code**
+```php
+public function location_phone( $atts ) {
+    $phone = $this->acf_helpers->get_location_field( 'phone_number', 123, '' );
+    return sprintf( '<span>%s</span>', esc_html( $phone ) );
+}
+```
+
+**Step 4: Run Test - Verify It Passes**
+```bash
+./vendor/bin/phpunit --filter test_new_shortcode
+# Expected: PASS
+```
+
+**Step 5: Add Edge Case Tests**
+```php
+public function test_new_shortcode_shows_error_when_no_phone() { }
+public function test_new_shortcode_uses_custom_class() { }
+public function test_new_shortcode_handles_invalid_location_id() { }
+```
+
+### Unit Test Requirements
+
+**Every public method MUST have tests for:**
+- ✅ Normal/happy path (valid input, expected output)
+- ✅ Edge cases (empty string, null, zero, large numbers)
+- ✅ Error conditions (invalid input, missing data)
+- ✅ Return types (string, array, bool, object)
+- ✅ Side effects (cache operations, hooks fired)
+
+**Example: Comprehensive Method Testing**
+```php
+// Test suite for parse_comma_list()
+public function test_parse_comma_list_with_valid_input() { }
+public function test_parse_comma_list_with_extra_spaces() { }
+public function test_parse_comma_list_with_empty_string() { }
+public function test_parse_comma_list_with_single_item() { }
+public function test_parse_comma_list_filters_empty_values() { }
+public function test_parse_comma_list_with_null_input() { }
+```
+
+### Code Coverage Requirements
+
+**Critical Classes (90%+ coverage required):**
+- `ACF_Location_Shortcodes_ACF_Helpers` - Core data layer
+- `ACF_Location_Shortcodes_Shortcodes` - All shortcodes
+- `ACF_Location_Shortcodes_Multisite_Sync` - Sync logic + media
+
+**Important Classes (75%+ coverage required):**
+- `ACF_Location_Shortcodes_Elementor` - Query filtering
+- `ACF_Location_Shortcodes_Admin` - Admin interface
+- `ACF_Location_Shortcodes_Network_Admin` - Network settings
+
+**Run coverage report:**
+```bash
+composer test:coverage
+# Generates coverage/index.html
+```
+
+### Mocking Patterns
+
+**WordPress Functions (Brain Monkey):**
+```php
+use Brain\Monkey\Functions;
+
+// Simple return
+Functions\when( 'get_option' )->justReturn( 'value' );
+
+// Return argument unchanged (escaping functions)
+Functions\when( 'esc_html' )->returnArg();
+
+// Expect exact call
+Functions\expect( 'update_option' )
+    ->once()
+    ->with( 'key', 'value' )
+    ->andReturn( true );
+
+// Conditional logic
+Functions\when( 'get_post_type' )->alias( function( $id ) {
+    return $id === 123 ? 'location' : 'post';
+} );
+```
+
+**ACF Functions:**
+```php
+// Mock ACF helpers class
+$this->acf_helpers = Mockery::mock( 'ACF_Location_Shortcodes_ACF_Helpers' );
+
+$this->acf_helpers->shouldReceive( 'get_location_field' )
+    ->once()
+    ->with( 'phone_number', 123, '' )
+    ->andReturn( '555-1234' );
+```
+
+### Custom Assertions
+
+**Provided by base TestCase:**
+```php
+// Check HTML content
+$this->assertStringContainsHTML( '<div class="test">', $output );
+
+// Check for error display
+$this->assertContainsError( $output );
+$this->assertNotContainsError( $output );
+
+// Mock post objects
+$post = $this->createMockPost( array(
+    'ID' => 123,
+    'post_type' => 'location',
+) );
+
+// Mock ACF fields
+$field = $this->createMockACFField( 'phone', 'text', '555-1234' );
+```
+
+### Running Tests
+
+**All tests:**
+```bash
+composer test
+# or
+./vendor/bin/phpunit
+```
+
+**Unit tests only:**
+```bash
+composer test:unit
+```
+
+**Integration tests only:**
+```bash
+composer test:integration
+```
+
+**Specific test file:**
+```bash
+./vendor/bin/phpunit tests/Unit/ACFHelpersTest.php
+```
+
+**Specific test method:**
+```bash
+./vendor/bin/phpunit --filter test_parse_comma_list
+```
+
+**With coverage:**
+```bash
+composer test:coverage
+```
+
+### Pre-Commit Test Checklist
+
+**Before ANY commit with code changes:**
+- [ ] Run full test suite: `composer test`
+- [ ] All tests passing (100% success rate)
+- [ ] No warnings or deprecation notices
+- [ ] Code coverage ≥ 80% for changed files
+- [ ] New methods have corresponding tests
+- [ ] Bug fixes include regression tests
+
+### Conventional Commits for Tests
+
+**Test-related commits:**
+```bash
+# Adding new tests (NO version bump)
+git commit -m "test: add unit tests for media sync functionality"
+
+# Updating tests (NO version bump)
+git commit -m "test: update ACF helpers tests for new validation"
+
+# Fixing tests (NO version bump)
+git commit -m "test: fix failing integration test for multisite sync"
+```
+
+**Version Impact:** `test:` commits do NOT trigger version bumps.
+
+### Testing Best Practices
+
+**DO ✅**
+- Write tests BEFORE implementing features (TDD)
+- Test one behavior per test method
+- Use descriptive test names (read like documentation)
+- Mock ALL external dependencies (WordPress, ACF, database)
+- Test edge cases (null, empty, invalid types)
+- Keep tests fast (< 100ms per test)
+- Use setup/teardown for common initialization
+- Test error handling explicitly
+- Verify security checks (capabilities, nonces)
+
+**DON'T ❌**
+- Skip tests because "it's simple code"
+- Test WordPress core functionality
+- Write slow tests (file I/O, database queries in unit tests)
+- Share state between tests
+- Commit failing tests
+- Ignore coverage drops
+- Test implementation details (test behavior, not internals)
+- Copy-paste test code (use helpers/fixtures)
+
+### AI Assistant Testing Behavior
+
+**When adding a new feature:**
+1. **FIRST:** Write failing test
+2. **SECOND:** Run test to verify failure
+3. **THIRD:** Implement minimum code to pass
+4. **FOURTH:** Run test to verify pass
+5. **FIFTH:** Add edge case tests
+6. **SIXTH:** Run full test suite
+7. **SEVENTH:** Check code coverage
+8. **FINALLY:** Provide test run output to user
+
+**When fixing a bug:**
+1. **FIRST:** Write regression test that reproduces bug
+2. **SECOND:** Verify test fails
+3. **THIRD:** Fix the bug
+4. **FOURTH:** Verify test passes
+5. **FIFTH:** Run full test suite
+
+**When updating existing code:**
+1. **FIRST:** Run existing tests
+2. **SECOND:** Update tests for new behavior
+3. **THIRD:** Update implementation
+4. **FOURTH:** Verify all tests pass
+5. **FIFTH:** Check coverage maintained
+
+**Response Format:**
+```
+I'll add tests for [feature] following TDD:
+
+1. Created failing test: tests/Unit/ClassTest.php::test_method_scenario()
+2. Test output: FAIL (expected)
+3. Implemented: includes/class-name.php::method()
+4. Test output: PASS
+5. Added edge cases: test_method_with_null(), test_method_with_empty()
+6. Full test suite: 124 tests, 124 passed ✓
+7. Code coverage: 87% (↑ from 85%)
+
+Ready to commit with: test: add comprehensive tests for [feature]
+```
+
+### Test Documentation
+
+**Complete testing guide:** `tests/README.md`
+- Installation instructions
+- Running tests (all scenarios)
+- Writing test guidelines
+- Mocking patterns
+- Debugging tests
+- CI/CD integration
+- Troubleshooting
+
 ## Common Mistakes to Avoid
 
 1. **Don't echo in shortcodes** - Always return string
@@ -843,6 +1158,9 @@ Author, company, version, date
 10. **NEVER rename files to .old before editing** - Edit in place, Git tracks history
 11. **ALWAYS use Conventional Commits** - Determines version bumps
 12. **Don't mix commit types** - One feat/fix/docs per commit
+13. **NEVER commit code without tests** - TDD is mandatory
+14. **NEVER skip test runs** - Run tests before every commit
+15. **NEVER ignore failing tests** - Fix or update immediately
 
 ## Testing Checklist
 

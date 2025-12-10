@@ -125,17 +125,79 @@
 }
 
 /* Buttons */
-.acf-sms-download-btn {
+.acf-sms-download-btn,
+.acf-sms-auto-install-btn {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
 }
 
-.acf-sms-download-btn .dashicons {
+.acf-sms-download-btn .dashicons,
+.acf-sms-auto-install-btn .dashicons {
 	font-size: 18px;
 	width: 18px;
 	height: 18px;
 	margin-top: -2px;
+}
+
+.acf-sms-auto-install-btn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+}
+
+.button-success {
+	background: #28a745 !important;
+	border-color: #28a745 !important;
+	color: #fff !important;
+}
+
+.button-success:hover,
+.button-success:focus {
+	background: #218838 !important;
+	border-color: #1e7e34 !important;
+}
+
+/* Badges */
+.acf-sms-badge {
+	display: inline-block;
+	padding: 3px 8px;
+	border-radius: 3px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	line-height: 1;
+}
+
+.acf-sms-badge-success {
+	background: #d4edda;
+	color: #155724;
+	border: 1px solid #c3e6cb;
+}
+
+.acf-sms-badge-warning {
+	background: #fff3cd;
+	color: #856404;
+	border: 1px solid #ffeaa7;
+}
+
+.acf-sms-badge-error {
+	background: #f8d7da;
+	color: #721c24;
+	border: 1px solid #f5c6cb;
+}
+
+/* Spinning animation */
+.dashicons.spin {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 /* Quick Links */

@@ -19,13 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Admin Interface** - Comprehensive WordPress admin menu at **ACF SMS**
-  - Dashboard tab with ACF status check, template download, and quick links
+  - Dashboard tab with ACF status check, template management, and quick links
   - README tab displaying plugin documentation in admin
   - One-click download of ACF field group template (`acf-template.json`)
   - Automatic detection of ACF installation status
   - Template mismatch detection comparing installed fields to plugin template
 - **Admin Notices** - Global dismissible notifications
   - Warning when ACF is not installed with one-click install link
+  - **Activate ACF** button when ACF is installed but not activated
   - Alert when ACF field groups don't match plugin template
   - Pre-search query link for ACF plugin installation
   - Per-user dismissal with user meta storage
@@ -34,10 +35,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Status indicators (success, warning, error)
   - Responsive card-based dashboard layout
   - Markdown-to-HTML converter for README display
+- **Auto-Install ACF Template** - One-click template installation
+  - Auto-Install button in admin dashboard when ACF is active
+  - Automatically detects if template is installed or outdated
+  - Automatically imports template when ACF is first activated
+  - Uses ACF's native import functions for reliability
+- **Multisite Synchronization** - Automatic post sync across network sites
+  - Syncs locations and team members when created, updated, deleted, trashed, or untrashed
+  - Maintains source site and post ID references
+  - Syncs ACF field data, taxonomies, and post status
+  - Network-wide enable/disable setting
+  - Per-site filtering via hooks
+  - Displays sync status in dashboard for multisite installations
+  - Prevents infinite sync loops with intelligent flagging
+- **Network Admin Support** - Multisite-aware features
+  - Admin notices display in network admin dashboard
+  - Install/activate ACF links use network admin URLs when in network context
+  - Sync status card visible only on multisite installations
 
 ### Changed
 - **Plugin Initialization** - Admin interface always loads, frontend features require ACF
 - **ACF Helpers** - Now instantiated even when ACF is not active (supports admin checks)
+- **Template Management** - Renamed "Download" to emphasize auto-install option
+- **Button Styling** - Added success state for auto-install completion
+
+### Fixed
+- **Multisite Compatibility** - ACF missing notice now shows in network admin
+- **Template Detection** - More accurate checking of installed vs. required field groups
 
 ---
 

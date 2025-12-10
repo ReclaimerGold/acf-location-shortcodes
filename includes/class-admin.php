@@ -68,9 +68,13 @@ class ACF_Location_Shortcodes_Admin {
 		// Network admin notices (multisite).
 		add_action( 'network_admin_notices', array( $this, 'show_acf_notices' ) );
 
+		// Auto-install ACF template when ACF is activated.
+		add_action( 'activated_plugin', array( $this, 'maybe_auto_install_template' ), 10, 2 );
+
 		// AJAX handlers.
 		add_action( 'wp_ajax_acf_sms_dismiss_notice', array( $this, 'ajax_dismiss_notice' ) );
 		add_action( 'wp_ajax_acf_sms_download_template', array( $this, 'ajax_download_template' ) );
+		add_action( 'wp_ajax_acf_sms_auto_install_template', array( $this, 'ajax_auto_install_template' ) );
 
 		// Admin assets.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
@@ -226,41 +230,57 @@ class ACF_Location_Shortcodes_Admin {
 				<!-- Template Download Card -->
 				<div class="acf-sms-card">
 					<h2><?php esc_html_e( 'ACF Template', 'acf-sms' ); ?></h2>
-					<p><?php esc_html_e( 'Download the pre-configured ACF field groups for locations and team members.', 'acf-sms' ); ?></p>
+					<p><?php esc_html_e( 'Manage the pre-configured ACF field groups for locations and team members.', 'acf-sms' ); ?></p>
 					
 					<?php if ( file_exists( $this->template_file ) ) : ?>
-						<p>
-							<a href="<?php echo esc_url( admin_url( 'admin-ajax.php?action=acf_sms_download_template&nonce=' . wp_create_nonce( 'acf_sms_download' ) ) ); ?>" 
-							   class="button button-primary acf-sms-download-btn" 
-							   download>
-								<span class="dashicons dashicons-download"></span>
-								<?php esc_html_e( 'Download ACF Template', 'acf-sms' ); ?>
-							</a>
-						</p>
-						
 						<?php if ( $acf_active ) : ?>
+							<?php if ( ! $template_match ) : ?>
+								<div class="acf-sms-notice acf-sms-notice-warning">
+									<p>
+										<span class="dashicons dashicons-info"></span>
+										<?php esc_html_e( 'Template not installed or outdated. Click below to auto-install.', 'acf-sms' ); ?>
+									</p>
+								</div>
+								<p>
+									<button type="button" class="button button-primary acf-sms-auto-install-btn" data-nonce="<?php echo esc_attr( wp_create_nonce( 'acf_sms_admin' ) ); ?>">
+										<span class="dashicons dashicons-update"></span>
+										<?php esc_html_e( 'Auto-Install Template', 'acf-sms' ); ?>
+									</button>
+								</p>
+							<?php else : ?>
+								<p class="acf-sms-status acf-sms-status-success">
+									<span class="dashicons dashicons-yes-alt"></span>
+									<?php esc_html_e( 'Your ACF field groups are up to date.', 'acf-sms' ); ?>
+								</p>
+							<?php endif; ?>
+							<p>
+								<a href="<?php echo esc_url( admin_url( 'admin-ajax.php?action=acf_sms_download_template&nonce=' . wp_create_nonce( 'acf_sms_download' ) ) ); ?>" 
+								   class="button acf-sms-download-btn" 
+								   download>
+									<span class="dashicons dashicons-download"></span>
+									<?php esc_html_e( 'Download Template (Manual)', 'acf-sms' ); ?>
+								</a>
+							</p>
 							<p class="description">
 								<?php
 								printf(
 									/* translators: %s: ACF Tools URL */
-									__( 'After downloading, go to <a href="%s">ACF → Tools → Import Field Groups</a> to import the template.', 'acf-sms' ),
+									__( 'Or manually import via <a href="%s">ACF → Tools → Import Field Groups</a>.', 'acf-sms' ),
 									esc_url( admin_url( 'edit.php?post_type=acf-field-group&page=acf-tools' ) )
 								);
 								?>
 							</p>
-						<?php endif; ?>
-
-						<?php if ( $acf_active && ! $template_match ) : ?>
-							<div class="acf-sms-notice acf-sms-notice-warning">
-								<p>
-									<span class="dashicons dashicons-info"></span>
-									<?php esc_html_e( 'The installed ACF field groups may not match the latest template. Consider re-importing to get the latest fields.', 'acf-sms' ); ?>
-								</p>
-							</div>
-						<?php elseif ( $acf_active && $template_match ) : ?>
-							<p class="acf-sms-status acf-sms-status-success">
-								<span class="dashicons dashicons-yes-alt"></span>
-								<?php esc_html_e( 'Your ACF field groups appear to be up to date.', 'acf-sms' ); ?>
+						<?php else : ?>
+							<p>
+								<a href="<?php echo esc_url( admin_url( 'admin-ajax.php?action=acf_sms_download_template&nonce=' . wp_create_nonce( 'acf_sms_download' ) ) ); ?>" 
+								   class="button button-primary acf-sms-download-btn" 
+								   download>
+									<span class="dashicons dashicons-download"></span>
+									<?php esc_html_e( 'Download ACF Template', 'acf-sms' ); ?>
+								</a>
+							</p>
+							<p class="description">
+								<?php esc_html_e( 'Download now and import after activating ACF.', 'acf-sms' ); ?>
 							</p>
 						<?php endif; ?>
 					<?php else : ?>
@@ -270,6 +290,93 @@ class ACF_Location_Shortcodes_Admin {
 						</p>
 					<?php endif; ?>
 				</div>
+
+				<?php if ( is_multisite() ) : ?>
+					<!-- Multisite Sync Card -->
+					<div class="acf-sms-card">
+						<h2><?php esc_html_e( 'Multisite Sync', 'acf-sms' ); ?></h2>
+						<?php
+						$sync_enabled = get_site_option( 'acf_sms_sync_enabled', false );
+						$sync_sites   = get_site_option( 'acf_sms_sync_sites', array() );
+						$master_site  = get_site_option( 'acf_sms_master_site', get_main_site_id() );
+						$current_site = get_current_blog_id();
+						$is_master    = ( $current_site === (int) $master_site );
+						$is_synced    = empty( $sync_sites ) || in_array( $current_site, $sync_sites, true );
+						$last_sync    = get_option( 'acf_sms_last_sync_time', 0 );
+						?>
+						
+						<?php if ( $sync_enabled ) : ?>
+							<p class="acf-sms-status acf-sms-status-success">
+								<span class="dashicons dashicons-yes-alt"></span>
+								<?php esc_html_e( 'Network sync is enabled', 'acf-sms' ); ?>
+							</p>
+							
+							<p>
+								<strong><?php esc_html_e( 'This site:', 'acf-sms' ); ?></strong>
+								<?php if ( $is_master ) : ?>
+									<span class="acf-sms-badge acf-sms-badge-success"><?php esc_html_e( 'Master Database', 'acf-sms' ); ?></span>
+								<?php elseif ( $is_synced ) : ?>
+									<span class="acf-sms-badge acf-sms-badge-success"><?php esc_html_e( 'Slave Site', 'acf-sms' ); ?></span>
+								<?php else : ?>
+									<span class="acf-sms-badge acf-sms-badge-warning"><?php esc_html_e( 'Not Synced', 'acf-sms' ); ?></span>
+								<?php endif; ?>
+							</p>
+							
+							<?php if ( $is_master ) : ?>
+								<p class="description">
+									<?php esc_html_e( 'Changes made here automatically sync to all slave sites.', 'acf-sms' ); ?>
+								</p>
+								<p class="description">
+									<?php
+									printf(
+										/* translators: %d: number of slave sites */
+										esc_html( _n( 'Syncing to %d slave site', 'Syncing to %d slave sites', count( $sync_sites ), 'acf-sms' ) ),
+										count( $sync_sites )
+									);
+									?>
+								</p>
+							<?php elseif ( $is_synced ) : ?>
+								<p class="description">
+									<?php esc_html_e( 'This site receives automatic updates from the master database.', 'acf-sms' ); ?>
+								</p>
+								<p class="description">
+									<?php esc_html_e( 'When editing posts, you can manually push local changes back to the master.', 'acf-sms' ); ?>
+								</p>
+							<?php else : ?>
+								<p class="description">
+									<?php esc_html_e( 'This site is excluded from network sync.', 'acf-sms' ); ?>
+								</p>
+							<?php endif; ?>
+
+							<?php if ( $last_sync ) : ?>
+								<p class="description">
+									<strong><?php esc_html_e( 'Last sync:', 'acf-sms' ); ?></strong>
+									<?php echo esc_html( human_time_diff( $last_sync, current_time( 'timestamp' ) ) . ' ago' ); ?>
+								</p>
+							<?php endif; ?>
+						<?php else : ?>
+							<p class="acf-sms-status acf-sms-status-warning">
+								<span class="dashicons dashicons-warning"></span>
+								<?php esc_html_e( 'Multisite sync is disabled', 'acf-sms' ); ?>
+							</p>
+							<p class="description">
+								<?php esc_html_e( 'Changes to locations and team members will not sync across sites.', 'acf-sms' ); ?>
+							</p>
+						<?php endif; ?>
+						
+						<?php if ( current_user_can( 'manage_network_options' ) ) : ?>
+							<p>
+								<a href="<?php echo esc_url( network_admin_url( 'admin.php?page=acf-sms-network' ) ); ?>" class="button">
+									<?php esc_html_e( 'Network Settings', 'acf-sms' ); ?>
+								</a>
+							</p>
+						<?php else : ?>
+							<p class="description">
+								<em><?php esc_html_e( 'Contact a network administrator to change sync settings.', 'acf-sms' ); ?></em>
+							</p>
+						<?php endif; ?>
+					</div>
+				<?php endif; ?>
 
 				<!-- Quick Links Card -->
 				<div class="acf-sms-card">
@@ -531,6 +638,117 @@ class ACF_Location_Shortcodes_Admin {
 		// Output file.
 		readfile( $this->template_file );
 		exit;
+	}
+
+	/**
+	 * Maybe auto-install ACF template when ACF is activated.
+	 *
+	 * @since 2.2.0
+	 * @param string $plugin Path to plugin file.
+	 * @param bool   $network_wide Whether plugin was network activated.
+	 */
+	public function maybe_auto_install_template( $plugin, $network_wide ) {
+		// Check if ACF was just activated.
+		if ( ! in_array( $plugin, array( 'advanced-custom-fields/acf.php', 'advanced-custom-fields-pro/acf.php' ), true ) ) {
+			return;
+		}
+
+		// Check if auto-install is enabled.
+		$auto_install = get_option( 'acf_sms_auto_install_template', true );
+		if ( ! $auto_install ) {
+			return;
+		}
+
+		// Small delay to ensure ACF is fully loaded.
+		add_action( 'admin_init', array( $this, 'auto_install_template' ), 999 );
+	}
+
+	/**
+	 * Auto-install ACF template.
+	 *
+	 * @since 2.2.0
+	 */
+	public function auto_install_template() {
+		// Check if template is already installed.
+		if ( $this->check_template_match() ) {
+			return;
+		}
+
+		// Install the template.
+		$result = $this->install_acf_template();
+
+		if ( $result ) {
+			// Set transient to show success notice.
+			set_transient( 'acf_sms_template_auto_installed', true, 60 );
+		}
+	}
+
+	/**
+	 * AJAX handler for auto-installing template.
+	 *
+	 * @since 2.2.0
+	 */
+	public function ajax_auto_install_template() {
+		check_ajax_referer( 'acf_sms_admin', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'acf-sms' ) ) );
+		}
+
+		if ( ! $this->is_acf_active() ) {
+			wp_send_json_error( array( 'message' => __( 'ACF is not active', 'acf-sms' ) ) );
+		}
+
+		$result = $this->install_acf_template();
+
+		if ( $result ) {
+			wp_send_json_success( array( 'message' => __( 'ACF template installed successfully', 'acf-sms' ) ) );
+		} else {
+			wp_send_json_error( array( 'message' => __( 'Failed to install ACF template', 'acf-sms' ) ) );
+		}
+	}
+
+	/**
+	 * Install ACF template from JSON file.
+	 *
+	 * @since 2.2.0
+	 * @return bool True on success, false on failure.
+	 */
+	private function install_acf_template() {
+		if ( ! $this->is_acf_active() ) {
+			return false;
+		}
+
+		if ( ! file_exists( $this->template_file ) ) {
+			return false;
+		}
+
+		// Read template file.
+		$json_data = file_get_contents( $this->template_file );
+		if ( ! $json_data ) {
+			return false;
+		}
+
+		$field_groups = json_decode( $json_data, true );
+		if ( ! $field_groups || ! is_array( $field_groups ) ) {
+			return false;
+		}
+
+		// Import each field group.
+		foreach ( $field_groups as $field_group ) {
+			// Check if field group already exists.
+			$existing = acf_get_field_group( $field_group['key'] );
+			
+			if ( $existing ) {
+				// Update existing field group.
+				acf_update_field_group( $field_group );
+			} else {
+				// Import new field group.
+				acf_import_field_group( $field_group );
+			}
+		}
+
+		return true;
 	}
 
 	/**

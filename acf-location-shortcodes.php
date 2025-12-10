@@ -77,6 +77,20 @@ class ACF_Location_Shortcodes {
 	public $admin;
 
 	/**
+	 * Multisite sync.
+	 *
+	 * @var ACF_Location_Shortcodes_Multisite_Sync
+	 */
+	public $multisite_sync;
+
+	/**
+	 * Network admin.
+	 *
+	 * @var ACF_Location_Shortcodes_Network_Admin
+	 */
+	public $network_admin;
+
+	/**
 	 * Get the singleton instance.
 	 *
 	 * @since 1.0.0
@@ -143,6 +157,16 @@ class ACF_Location_Shortcodes {
 			$this->admin = new ACF_Location_Shortcodes_Admin( $this->acf_helpers );
 		}
 
+		// Initialize network admin (if multisite).
+		if ( is_multisite() ) {
+			$this->network_admin = new ACF_Location_Shortcodes_Network_Admin();
+		}
+
+		// Initialize multisite sync (if multisite and ACF active).
+		if ( is_multisite() && function_exists( 'get_field' ) ) {
+			$this->multisite_sync = new ACF_Location_Shortcodes_Multisite_Sync( $this->acf_helpers );
+		}
+
 		// Don't initialize frontend features if ACF is not active.
 		if ( ! function_exists( 'get_field' ) ) {
 			return;
@@ -171,6 +195,16 @@ class ACF_Location_Shortcodes {
 		// Load admin interface if in admin.
 		if ( is_admin() ) {
 			require_once ACF_LS_PLUGIN_DIR . 'includes/class-admin.php';
+		}
+
+		// Load network admin if multisite.
+		if ( is_multisite() ) {
+			require_once ACF_LS_PLUGIN_DIR . 'includes/class-network-admin.php';
+		}
+
+		// Load multisite sync if multisite.
+		if ( is_multisite() && function_exists( 'get_field' ) ) {
+			require_once ACF_LS_PLUGIN_DIR . 'includes/class-multisite-sync.php';
 		}
 
 		// Load frontend components if ACF is active.

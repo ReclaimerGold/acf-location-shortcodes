@@ -198,13 +198,21 @@ The plugin includes a comprehensive admin interface accessible from **ACF SMS** 
 **ACF Status Check**
 - Displays whether Advanced Custom Fields is installed and active
 - Provides one-click link to install ACF if missing
+- Shows one-click **Activate ACF** button if installed but inactive
 - Shows template sync status
 
-**Template Download**
-- One-click download of the ACF field group template (`acf-template.json`)
-- Version-stamped filename for easy tracking
-- Direct link to ACF import tools when ACF is active
-- Automatic detection of template mismatches
+**Template Management**
+- **Auto-Install Template** button for one-click installation when ACF is active
+- Automatically detects if template is installed or outdated
+- Manual download option (`acf-template.json`) with version stamping
+- Direct link to ACF import tools
+- Visual indicators for template status (installed, outdated, missing)
+
+**Multisite Sync** (Multisite installations only)
+- Shows sync status across network sites
+- Displays number of sites configured for sync
+- Link to network settings for administrators
+- Automatically syncs locations and team members when enabled
 
 **Quick Links**
 - Manage Locations
@@ -260,18 +268,25 @@ The plugin requires **Advanced Custom Fields** to function. The admin interface 
 
 This plugin includes pre-configured field groups ready to import.
 
-**Option A: Download via Admin Interface (Recommended)**
+**Option A: Auto-Install via Admin Interface (Easiest!)**
 1. Go to **ACF SMS > Dashboard** in your WordPress admin
-2. Click the **Download ACF Template** button
+2. If templates are not installed, you'll see an **Auto-Install Template** button
+3. Click the button and wait a few seconds
+4. Templates will be automatically imported into ACF
+5. Page will reload showing updated status
+
+**Option B: Manual Download and Import**
+1. Go to **ACF SMS > Dashboard** in your WordPress admin
+2. Click the **Download Template (Manual)** button
 3. The file `acf-template-2.2.0.json` will download
-4. Go to **ACF > Tools > Import Field Groups**
+4. Go to **ACF → Tools → Import Field Groups**
 5. Choose the downloaded JSON file
 6. Click **Import JSON**
 
-**Option B: Manual Import from Plugin Files**
-1. Go to **ACF > Tools**
+**Option C: Import from Plugin Files**
+1. Go to **ACF → Tools**
 2. Click on **Import Field Groups** tab
-3. Choose File: Select `acf-export-2025-10-28.json` from the plugin directory
+3. Choose File: Select `acf-import-templates/acf-template.json` from the plugin directory
 4. Click **Import JSON**
 
 This will create:
@@ -280,6 +295,16 @@ This will create:
 - ✅ **Service Locations** post type
 - ✅ **Team Members** post type
 - ✅ **Team Member Types** taxonomy
+
+**🎉 Auto-Installation on ACF Activation**
+
+When you activate the ACF plugin on any site, the plugin will automatically:
+- Detect that ACF was just activated
+- Check if field groups are already installed
+- Auto-install the template if not present or outdated
+- Show a success notice when complete
+
+This means you can install ACF and the templates will be configured automatically!
 
 ### 📍 Step 3: Create Your First Location
 
@@ -542,6 +567,51 @@ This plugin includes a complete ACF export file (`acf-export-2025-10-28.json`) r
 2. Select **Import Field Groups** tab
 3. Choose `acf-export-2025-10-28.json` from plugin directory
 4. Click **Import JSON**
+
+## Multisite Features
+
+### Automatic Post Synchronization
+
+For WordPress multisite networks, the plugin can automatically synchronize locations and team members across all sites.
+
+**How It Works:**
+- When you create, update, or delete a location or team member on one site, it syncs to other sites
+- Each synced post maintains a reference to its source site and post ID
+- ACF field data, taxonomies, and post status are all synchronized
+- Supports trash/untrash operations
+
+**Enabling Sync:**
+1. Go to **Network Admin > ACF SMS Network Settings** (coming soon)
+2. Enable "Multisite Synchronization"
+3. Select which sites should receive synced content
+4. Save settings
+
+**Current Limitations:**
+- Relationship fields (like team member → location assignments) are not remapped across sites yet
+- Featured images are referenced but not copied to media libraries
+- Syncing is currently one-way (from source to targets)
+
+**Configuration:**
+```php
+// Enable sync network-wide
+update_site_option( 'acf_sms_sync_enabled', true );
+
+// Set specific sites to sync to (or leave empty for all sites)
+update_site_option( 'acf_sms_sync_sites', array( 2, 3, 5 ) );
+
+// Disable sync for specific site via filter
+add_filter( 'acf_sms_sync_enabled', function( $enabled ) {
+    if ( get_current_blog_id() === 4 ) {
+        return false; // Don't sync on site 4
+    }
+    return $enabled;
+} );
+```
+
+**Viewing Sync Status:**
+- Network administrators can see sync status in **ACF SMS > Dashboard**
+- Shows number of sites configured for synchronization
+- Displays whether sync is enabled or disabled
 
 ## Troubleshooting
 
