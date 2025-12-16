@@ -32,7 +32,31 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 	 *
 	 * @var array
 	 */
-	private $sync_post_types = array( 'location', 'team-member' );
+	private $sync_post_types = array( 'location', 'team-member', 'service', 'condition' );
+
+	/**
+	 * Relationship fields that need ID remapping across sites.
+	 * Format: 'field_name' => 'target_post_type'
+	 *
+	 * @var array
+	 */
+	private $relationship_fields = array(
+		'servicing_physical_location' => 'location',
+		'team_members_assigned'       => 'team-member',
+		'location'                    => 'location',
+		'specialties'                 => 'service',
+	);
+
+	/**
+	 * Taxonomies to sync for each post type.
+	 * Format: 'post_type' => array( 'taxonomy1', 'taxonomy2' )
+	 *
+	 * @var array
+	 */
+	private $sync_taxonomies = array(
+		'service'     => array( 'service-category', 'service-tag' ),
+		'team-member' => array( 'team-member-type' ),
+	);
 
 	/**
 	 * Cache for synced attachment IDs.
@@ -146,6 +170,9 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 		// Set flag to prevent loops.
 		$this->sync_in_progress = true;
 
+		// Clear attachment cache before syncing to ensure fresh copies for each site.
+		$this->attachment_id_cache = array();
+
 		// Sync to each site.
 		foreach ( $sync_sites as $site_id ) {
 			// Skip current site.
@@ -161,6 +188,10 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 				continue;
 			}
 
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: === SYNCING TO SITE %d ===', $site_id ) );
+			}
+
 			// Switch to target site.
 			switch_to_blog( $site_id );
 
@@ -172,6 +203,10 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 
 			// Restore original site.
 			restore_current_blog();
+			
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: === COMPLETED SYNC TO SITE %d ===', $site_id ) );
+			}
 		}
 
 		// Reset flag.
@@ -201,12 +236,14 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 			if ( $duplicate_id ) {
 				if ( ACF_LS_DEBUG ) {
 					error_log( sprintf( 
-						'ACF SMS: Duplicate found for "%s" (slug: %s). Skipping sync to avoid duplicate.', 
+						'ACF SMS: Duplicate found for "%s" (slug: %s) on target site - linking existing post %d.', 
 						$source_post->post_title, 
-						$source_post->post_name 
+						$source_post->post_name,
+						$duplicate_id
 					) );
 				}
-				return; // Skip syncing this post - it's a duplicate.
+				// LINK the duplicate instead of skipping - treat it as an existing synced post.
+				$existing_id = $duplicate_id;
 			}
 		}
 
@@ -246,6 +283,11 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 		// Sync ACF fields.
 		$this->sync_acf_fields( $source_post_id, $source_site_id, $synced_id );
 
+		// Sync profile picture specifically for team members (ensures it works).
+		if ( $source_post->post_type === 'team-member' ) {
+			$this->sync_profile_picture( $source_post_id, $source_site_id, $synced_id );
+		}
+
 		// Sync taxonomies.
 		$this->sync_taxonomies( $source_post, $synced_id );
 
@@ -266,6 +308,9 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 	 * @param int $target_post_id Target post ID.
 	 */
 	private function sync_acf_fields( $source_post_id, $source_site_id, $target_post_id ) {
+		// Known image field names - fallback for when field type detection fails.
+		$known_image_fields = array( 'profile_picture', 'servcat_featured_image' );
+		
 		// Switch to source site to get ACF data.
 		switch_to_blog( $source_site_id );
 		$acf_fields = get_fields( $source_post_id );
@@ -274,6 +319,9 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 		// Get field objects to check field types.
 		if ( function_exists( 'get_field_objects' ) ) {
 			$field_objects = get_field_objects( $source_post_id );
+			if ( ! is_array( $field_objects ) ) {
+				$field_objects = array();
+			}
 		}
 		
 		restore_current_blog();
@@ -289,18 +337,83 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 			if ( isset( $field_objects[ $field_name ]['type'] ) ) {
 				$field_type = $field_objects[ $field_name ]['type'];
 			}
+			
+			// Fallback: Check if this is a known image field by name.
+			$is_known_image_field = in_array( $field_name, $known_image_fields, true );
+			
+			// Also detect image fields by value structure (array with 'ID', 'url', 'sizes' keys).
+			$looks_like_image = false;
+			if ( is_array( $field_value ) && isset( $field_value['ID'] ) && isset( $field_value['url'] ) ) {
+				// Check for image-specific keys.
+				if ( isset( $field_value['sizes'] ) || isset( $field_value['width'] ) || isset( $field_value['height'] ) ) {
+					$looks_like_image = true;
+				}
+			}
 
 			// Handle image/file fields - need to sync the attachment.
-			if ( in_array( $field_type, array( 'image', 'file' ), true ) ) {
+			// Use field type, known field names, or value structure detection.
+			$is_image_field = in_array( $field_type, array( 'image', 'file' ), true ) 
+				|| $is_known_image_field 
+				|| $looks_like_image;
+			
+			if ( $is_image_field ) {
+				$original_attachment_id = null;
+				
 				if ( is_numeric( $field_value ) ) {
-					// Single attachment ID.
-					$field_value = $this->sync_attachment( $field_value, $source_site_id );
+					$original_attachment_id = (int) $field_value;
 				} elseif ( is_array( $field_value ) && isset( $field_value['ID'] ) ) {
-					// Attachment array format.
-					$synced_id = $this->sync_attachment( $field_value['ID'], $source_site_id );
+					$original_attachment_id = (int) $field_value['ID'];
+				}
+				
+				if ( $original_attachment_id ) {
+					if ( ACF_LS_DEBUG ) {
+						error_log( sprintf( 
+							'ACF SMS: Attempting to sync image field "%s" (type: %s, known: %s, looks_like: %s) - attachment ID %d', 
+							$field_name,
+							$field_type ?: 'unknown',
+							$is_known_image_field ? 'yes' : 'no',
+							$looks_like_image ? 'yes' : 'no',
+							$original_attachment_id 
+						) );
+					}
+					
+					$synced_id = $this->sync_attachment( $original_attachment_id, $source_site_id );
+					
 					if ( $synced_id ) {
 						$field_value = $synced_id;
+						
+						if ( ACF_LS_DEBUG ) {
+							error_log( sprintf( 
+								'ACF SMS: Successfully synced media field "%s" - source attachment %d to target attachment %d', 
+								$field_name, 
+								$original_attachment_id, 
+								$synced_id 
+							) );
+						}
+					} else {
+						// Attachment sync failed - skip updating this field to preserve existing data.
+						if ( ACF_LS_DEBUG ) {
+							error_log( sprintf( 
+								'ACF SMS: Failed to sync media field "%s" - attachment %d', 
+								$field_name, 
+								$original_attachment_id 
+							) );
+						}
+						continue;
 					}
+				} elseif ( empty( $field_value ) ) {
+					// Field is empty - clear it on target.
+					$field_value = '';
+				} else {
+					// Unknown format - skip to avoid data corruption.
+					if ( ACF_LS_DEBUG ) {
+						error_log( sprintf( 
+							'ACF SMS: Unknown format for media field "%s" - value type: %s', 
+							$field_name,
+							gettype( $field_value )
+						) );
+					}
+					continue;
 				}
 			} elseif ( $field_type === 'gallery' ) {
 				// Gallery field - array of attachment IDs.
@@ -321,19 +434,168 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 					}
 					$field_value = $synced_ids;
 				}
-			} elseif ( is_array( $field_value ) && ! empty( $field_value ) ) {
-				// Handle relationship fields (need to remap IDs).
-				$first_item = reset( $field_value );
-				if ( is_object( $first_item ) && isset( $first_item->ID ) ) {
-					// This might be a relationship field - for now, skip remapping.
-					// In future, could remap related post IDs across sites.
+			} elseif ( in_array( $field_type, array( 'relationship', 'post_object' ), true ) ) {
+				// Handle relationship and post_object fields - need to remap IDs across sites.
+				$field_value = $this->remap_relationship_field( $field_name, $field_value, $source_site_id );
+				
+				// Skip if remapping returned null (unable to remap).
+				if ( $field_value === null ) {
 					continue;
 				}
 			}
 
 			// Update field value.
-			update_field( $field_name, $field_value, $target_post_id );
+			// Get field key from field objects if available.
+			$field_key = isset( $field_objects[ $field_name ]['key'] ) ? $field_objects[ $field_name ]['key'] : '';
+			
+			// Try update_field first (uses ACF's internal logic).
+			$update_result = update_field( $field_name, $field_value, $target_post_id );
+			
+			// If update_field returned false and we have the field key, try with the key directly.
+			if ( ! $update_result && $field_key ) {
+				$update_result = update_field( $field_key, $field_value, $target_post_id );
+				
+				if ( ACF_LS_DEBUG ) {
+					error_log( sprintf( 
+						'ACF SMS: Retry with field key "%s" returned: %s', 
+						$field_key,
+						$update_result ? 'true' : 'false'
+					) );
+				}
+			}
+			
+			// Final fallback for image fields: update post meta directly.
+			if ( ! $update_result && $is_image_field && is_numeric( $field_value ) ) {
+				update_post_meta( $target_post_id, $field_name, $field_value );
+				
+				// Also store the field key reference if we have it.
+				if ( $field_key ) {
+					update_post_meta( $target_post_id, '_' . $field_name, $field_key );
+				}
+				
+				if ( ACF_LS_DEBUG ) {
+					error_log( sprintf( 
+						'ACF SMS: Fallback update_post_meta for "%s" with value %d (key: %s)', 
+						$field_name, 
+						$field_value,
+						$field_key ?: 'none'
+					) );
+				}
+			}
+			
+			if ( ACF_LS_DEBUG && $is_image_field ) {
+				error_log( sprintf( 
+					'ACF SMS: update_field("%s", %s, %d) returned: %s', 
+					$field_name, 
+					is_scalar( $field_value ) ? $field_value : gettype( $field_value ),
+					$target_post_id,
+					$update_result ? 'true' : 'false'
+				) );
+			}
 		}
+	}
+
+	/**
+	 * Remap relationship/post_object field IDs from source site to target site.
+	 *
+	 * @since 2.4.0
+	 * @param string $field_name  ACF field name.
+	 * @param mixed  $field_value Field value (post object(s) or ID(s)).
+	 * @param int    $source_site_id Source site ID.
+	 * @return mixed Remapped field value (array of IDs) or null if unable to remap.
+	 */
+	private function remap_relationship_field( $field_name, $field_value, $source_site_id ) {
+		if ( empty( $field_value ) ) {
+			return array();
+		}
+
+		// Handle single post object (post_object field with multiple=0).
+		$is_single = false;
+		if ( ! is_array( $field_value ) || ( is_object( $field_value ) ) ) {
+			$field_value = array( $field_value );
+			$is_single = true;
+		}
+
+		// Check if we have an array of objects.
+		$first_item = reset( $field_value );
+		if ( ! is_object( $first_item ) && ! is_numeric( $first_item ) ) {
+			// Not a valid relationship field format.
+			return null;
+		}
+
+		$remapped_ids = array();
+
+		foreach ( $field_value as $item ) {
+			// Get source post ID.
+			$source_related_id = 0;
+			if ( is_object( $item ) && isset( $item->ID ) ) {
+				$source_related_id = $item->ID;
+			} elseif ( is_numeric( $item ) ) {
+				$source_related_id = absint( $item );
+			}
+
+			if ( ! $source_related_id ) {
+				continue;
+			}
+
+			// Find the corresponding post on target site.
+			$target_related_id = $this->get_synced_post_id( $source_related_id, $source_site_id );
+
+			if ( $target_related_id ) {
+				$remapped_ids[] = $target_related_id;
+				
+				if ( ACF_LS_DEBUG ) {
+					error_log( sprintf(
+						'ACF SMS: Remapped relationship %s: source ID %d -> target ID %d',
+						$field_name,
+						$source_related_id,
+						$target_related_id
+					) );
+				}
+			} else {
+				// Related post doesn't exist on target site yet.
+				// Try to find by title/slug as fallback.
+				switch_to_blog( $source_site_id );
+				$source_post = get_post( $source_related_id );
+				restore_current_blog();
+
+				if ( $source_post ) {
+					// Check if this post type should be synced.
+					if ( in_array( $source_post->post_type, $this->sync_post_types, true ) ) {
+						// Look for matching post by slug on target site.
+						$target_post = get_page_by_path( $source_post->post_name, OBJECT, $source_post->post_type );
+						
+						if ( $target_post ) {
+							$remapped_ids[] = $target_post->ID;
+							
+							if ( ACF_LS_DEBUG ) {
+								error_log( sprintf(
+									'ACF SMS: Remapped relationship %s by slug: source ID %d -> target ID %d',
+									$field_name,
+									$source_related_id,
+									$target_post->ID
+								) );
+							}
+						} else {
+							if ( ACF_LS_DEBUG ) {
+								error_log( sprintf(
+									'ACF SMS: Unable to remap relationship %s: source ID %d not found on target site',
+									$field_name,
+									$source_related_id
+								) );
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Return single ID for post_object fields, array for relationship fields.
+		if ( $is_single ) {
+			return ! empty( $remapped_ids ) ? $remapped_ids[0] : null;
+		}
+
+		return $remapped_ids;
 	}
 
 	/**
@@ -353,13 +615,124 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 
 			if ( $source_site_id ) {
 				switch_to_blog( $source_site_id );
-				$terms = wp_get_object_terms( $source_post_id, $taxonomy, array( 'fields' => 'names' ) );
+				
+				// Get full term data including hierarchy for hierarchical taxonomies.
+				$is_hierarchical = is_taxonomy_hierarchical( $taxonomy );
+				$terms = wp_get_object_terms( $source_post_id, $taxonomy, array( 
+					'fields' => 'all',
+					'orderby' => 'parent', // Parents first for hierarchical.
+				) );
+				
 				restore_current_blog();
 
-				if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
-					wp_set_object_terms( $target_post_id, $terms, $taxonomy, false );
+				if ( is_wp_error( $terms ) || empty( $terms ) ) {
+					// Clear terms on target if source has none.
+					wp_set_object_terms( $target_post_id, array(), $taxonomy, false );
+					continue;
+				}
+
+				if ( $is_hierarchical ) {
+					// For hierarchical taxonomies, sync with parent relationships.
+					$this->sync_hierarchical_terms( $terms, $taxonomy, $target_post_id, $source_site_id );
+				} else {
+					// For non-hierarchical taxonomies, just sync term names.
+					$term_names = wp_list_pluck( $terms, 'name' );
+					wp_set_object_terms( $target_post_id, $term_names, $taxonomy, false );
+				}
+
+				if ( ACF_LS_DEBUG ) {
+					error_log( sprintf(
+						'ACF SMS: Synced %d terms for taxonomy %s on post %d',
+						count( $terms ),
+						$taxonomy,
+						$target_post_id
+					) );
 				}
 			}
+		}
+	}
+
+	/**
+	 * Sync hierarchical terms maintaining parent-child relationships.
+	 *
+	 * @since 2.4.0
+	 * @param array  $source_terms   Array of source term objects.
+	 * @param string $taxonomy       Taxonomy slug.
+	 * @param int    $target_post_id Target post ID.
+	 * @param int    $source_site_id Source site ID.
+	 */
+	private function sync_hierarchical_terms( $source_terms, $taxonomy, $target_post_id, $source_site_id ) {
+		$term_ids_to_set = array();
+		$term_id_map = array(); // Maps source term ID to target term ID.
+
+		// First pass: Create/find all terms and build the mapping.
+		foreach ( $source_terms as $source_term ) {
+			// Check if term exists on target by slug.
+			$target_term = get_term_by( 'slug', $source_term->slug, $taxonomy );
+
+			if ( $target_term ) {
+				$term_ids_to_set[] = $target_term->term_id;
+				$term_id_map[ $source_term->term_id ] = $target_term->term_id;
+			} else {
+				// Term doesn't exist - create it.
+				$parent_id = 0;
+				
+				// If this term has a parent, try to find the mapped parent ID.
+				if ( $source_term->parent > 0 ) {
+					if ( isset( $term_id_map[ $source_term->parent ] ) ) {
+						$parent_id = $term_id_map[ $source_term->parent ];
+					} else {
+						// Try to find parent by getting it from source site.
+						switch_to_blog( $source_site_id );
+						$source_parent = get_term( $source_term->parent, $taxonomy );
+						restore_current_blog();
+
+						if ( $source_parent && ! is_wp_error( $source_parent ) ) {
+							$target_parent = get_term_by( 'slug', $source_parent->slug, $taxonomy );
+							if ( $target_parent ) {
+								$parent_id = $target_parent->term_id;
+							}
+						}
+					}
+				}
+
+				$new_term = wp_insert_term(
+					$source_term->name,
+					$taxonomy,
+					array(
+						'slug'        => $source_term->slug,
+						'description' => $source_term->description,
+						'parent'      => $parent_id,
+					)
+				);
+
+				if ( ! is_wp_error( $new_term ) ) {
+					$term_ids_to_set[] = $new_term['term_id'];
+					$term_id_map[ $source_term->term_id ] = $new_term['term_id'];
+
+					if ( ACF_LS_DEBUG ) {
+						error_log( sprintf(
+							'ACF SMS: Created term "%s" (ID: %d) in taxonomy %s',
+							$source_term->name,
+							$new_term['term_id'],
+							$taxonomy
+						) );
+					}
+				} else {
+					if ( ACF_LS_DEBUG ) {
+						error_log( sprintf(
+							'ACF SMS: Failed to create term "%s": %s',
+							$source_term->name,
+							$new_term->get_error_message()
+						) );
+					}
+				}
+			}
+		}
+
+		// Set all terms on the post.
+		if ( ! empty( $term_ids_to_set ) ) {
+			wp_set_object_terms( $target_post_id, $term_ids_to_set, $taxonomy, false );
 		}
 	}
 
@@ -387,6 +760,176 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 
 		if ( $target_thumb_id ) {
 			set_post_thumbnail( $target_post_id, $target_thumb_id );
+		}
+	}
+
+	/**
+	 * Sync profile picture for team members.
+	 * This is a dedicated method to ensure profile pictures are properly synced.
+	 *
+	 * @since 2.4.0
+	 * @param int $source_post_id Source post ID.
+	 * @param int $source_site_id Source site ID.
+	 * @param int $target_post_id Target post ID.
+	 */
+	private function sync_profile_picture( $source_post_id, $source_site_id, $target_post_id ) {
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: === sync_profile_picture START === source_post: %d, source_site: %d, target_post: %d', 
+				$source_post_id, $source_site_id, $target_post_id ) );
+		}
+		
+		// Get the profile_picture attachment ID from the source site.
+		switch_to_blog( $source_site_id );
+		
+		// Debug: Show all post meta for this post to see what's stored.
+		if ( ACF_LS_DEBUG ) {
+			$all_meta = get_post_meta( $source_post_id );
+			$profile_keys = array();
+			foreach ( $all_meta as $key => $value ) {
+				if ( stripos( $key, 'profile' ) !== false || stripos( $key, 'picture' ) !== false || stripos( $key, 'image' ) !== false ) {
+					$profile_keys[ $key ] = $value;
+				}
+			}
+			error_log( sprintf( 'ACF SMS: Source post %d meta keys containing profile/picture/image: %s', 
+				$source_post_id, print_r( $profile_keys, true ) ) );
+		}
+		
+		// Try to get the raw meta value first (attachment ID).
+		$source_attachment_id = get_post_meta( $source_post_id, 'profile_picture', true );
+		
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: Raw meta "profile_picture" value: %s (type: %s)', 
+				is_array( $source_attachment_id ) ? print_r( $source_attachment_id, true ) : $source_attachment_id,
+				gettype( $source_attachment_id ) ) );
+		}
+		
+		// If it's an array, extract the ID.
+		if ( is_array( $source_attachment_id ) && isset( $source_attachment_id['ID'] ) ) {
+			$source_attachment_id = (int) $source_attachment_id['ID'];
+		} elseif ( is_array( $source_attachment_id ) && isset( $source_attachment_id['id'] ) ) {
+			$source_attachment_id = (int) $source_attachment_id['id'];
+		}
+		
+		// If still not numeric, try get_field which handles ACF's format.
+		if ( ! is_numeric( $source_attachment_id ) || empty( $source_attachment_id ) ) {
+			if ( function_exists( 'get_field' ) ) {
+				// Try with raw value (false).
+				$profile_pic = get_field( 'profile_picture', $source_post_id, false );
+				
+				if ( ACF_LS_DEBUG ) {
+					error_log( sprintf( 'ACF SMS: get_field raw value: %s (type: %s)', 
+						is_array( $profile_pic ) ? print_r( $profile_pic, true ) : $profile_pic,
+						gettype( $profile_pic ) ) );
+				}
+				
+				if ( is_numeric( $profile_pic ) ) {
+					$source_attachment_id = (int) $profile_pic;
+				} elseif ( is_array( $profile_pic ) && isset( $profile_pic['ID'] ) ) {
+					$source_attachment_id = (int) $profile_pic['ID'];
+				} elseif ( is_array( $profile_pic ) && isset( $profile_pic['id'] ) ) {
+					$source_attachment_id = (int) $profile_pic['id'];
+				}
+				
+				// Also try with formatted value (true).
+				if ( empty( $source_attachment_id ) ) {
+					$profile_pic_formatted = get_field( 'profile_picture', $source_post_id, true );
+					
+					if ( ACF_LS_DEBUG ) {
+						error_log( sprintf( 'ACF SMS: get_field formatted value: %s (type: %s)', 
+							is_array( $profile_pic_formatted ) ? 'array with keys: ' . implode( ', ', array_keys( $profile_pic_formatted ) ) : $profile_pic_formatted,
+							gettype( $profile_pic_formatted ) ) );
+					}
+					
+					if ( is_array( $profile_pic_formatted ) && isset( $profile_pic_formatted['ID'] ) ) {
+						$source_attachment_id = (int) $profile_pic_formatted['ID'];
+					} elseif ( is_array( $profile_pic_formatted ) && isset( $profile_pic_formatted['id'] ) ) {
+						$source_attachment_id = (int) $profile_pic_formatted['id'];
+					} elseif ( is_numeric( $profile_pic_formatted ) ) {
+						$source_attachment_id = (int) $profile_pic_formatted;
+					}
+				}
+			}
+		}
+		
+		// Also try to get the ACF field key for later use.
+		$field_key = get_post_meta( $source_post_id, '_profile_picture', true );
+		
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: Final source_attachment_id: %s, field_key: %s', 
+				$source_attachment_id ?: 'empty', $field_key ?: 'empty' ) );
+		}
+		
+		restore_current_blog();
+
+		if ( empty( $source_attachment_id ) ) {
+			// No profile picture on source - clear it on target.
+			delete_post_meta( $target_post_id, 'profile_picture' );
+			delete_post_meta( $target_post_id, '_profile_picture' );
+			
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: No profile_picture on source post %d, cleared on target %d', $source_post_id, $target_post_id ) );
+			}
+			return;
+		}
+
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: Syncing profile_picture - source attachment ID: %d, field key: %s', $source_attachment_id, $field_key ?: 'none' ) );
+		}
+
+		// Sync the attachment to get the target site's attachment ID.
+		$target_attachment_id = $this->sync_attachment( $source_attachment_id, $source_site_id );
+
+		if ( ! $target_attachment_id ) {
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: Failed to sync profile_picture attachment %d', $source_attachment_id ) );
+			}
+			return;
+		}
+
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: Profile picture attachment synced: source %d -> target %d', $source_attachment_id, $target_attachment_id ) );
+		}
+
+		// Method 1: Try ACF's update_field with field name.
+		$updated = false;
+		if ( function_exists( 'update_field' ) ) {
+			$updated = update_field( 'profile_picture', $target_attachment_id, $target_post_id );
+			
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: update_field("profile_picture", %d, %d) = %s', $target_attachment_id, $target_post_id, $updated ? 'success' : 'failed' ) );
+			}
+		}
+
+		// Method 2: Try ACF's update_field with field key.
+		if ( ! $updated && function_exists( 'update_field' ) && $field_key ) {
+			$updated = update_field( $field_key, $target_attachment_id, $target_post_id );
+			
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: update_field("%s", %d, %d) = %s', $field_key, $target_attachment_id, $target_post_id, $updated ? 'success' : 'failed' ) );
+			}
+		}
+
+		// Method 3: Direct post meta update (always do this as a backup).
+		update_post_meta( $target_post_id, 'profile_picture', $target_attachment_id );
+		
+		// Store the field key reference so ACF recognizes this as an ACF field.
+		if ( $field_key ) {
+			update_post_meta( $target_post_id, '_profile_picture', $field_key );
+		} else {
+			// Use the known field key for profile_picture from the ACF export.
+			update_post_meta( $target_post_id, '_profile_picture', 'field_68f69441b39f5' );
+		}
+
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 
+				'ACF SMS: Profile picture sync complete for post %d - attachment ID %d stored in meta', 
+				$target_post_id, 
+				$target_attachment_id 
+			) );
+			
+			// Verify the value was saved.
+			$verify = get_post_meta( $target_post_id, 'profile_picture', true );
+			error_log( sprintf( 'ACF SMS: Verification - profile_picture meta value: %s', $verify ) );
 		}
 	}
 
@@ -612,21 +1155,42 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 	 * @param int $source_site_id       Source site ID.
 	 * @return int|false Target attachment ID or false on failure.
 	 */
-	private function sync_attachment( $source_attachment_id, $source_site_id ) {
+	private function sync_attachment( $source_attachment_id, $source_site_id, $force = false ) {
 		if ( ! $source_attachment_id ) {
+			if ( ACF_LS_DEBUG ) {
+				error_log( 'ACF SMS: sync_attachment called with empty source_attachment_id' );
+			}
 			return false;
 		}
 
-		// Check cache first.
-		$cache_key = $source_site_id . '_' . $source_attachment_id;
-		if ( isset( $this->attachment_id_cache[ $cache_key ] ) ) {
+		// Get the current (target) site ID - this is the site we're syncing TO.
+		$target_site_id = get_current_blog_id();
+
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: sync_attachment START - source_att: %d, source_site: %d, target_site: %d, force: %s', 
+				$source_attachment_id, $source_site_id, $target_site_id, $force ? 'yes' : 'no' ) );
+		}
+
+		// Check cache first - MUST include target site ID to avoid cross-site confusion!
+		$cache_key = $target_site_id . '_' . $source_site_id . '_' . $source_attachment_id;
+		
+		if ( ! $force && isset( $this->attachment_id_cache[ $cache_key ] ) ) {
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: Cache hit - returning %d', $this->attachment_id_cache[ $cache_key ] ) );
+			}
 			return $this->attachment_id_cache[ $cache_key ];
 		}
 
 		// Check if attachment already exists on current site.
 		$existing_id = $this->get_synced_attachment_id( $source_attachment_id, $source_site_id );
+		
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: Existing synced attachment on target site: %s', $existing_id ?: 'none' ) );
+		}
 
-		if ( $existing_id ) {
+		$target_id = false;
+
+		if ( $existing_id && ! $force ) {
 			// Check if we need to update it.
 			switch_to_blog( $source_site_id );
 			$source_modified = get_post_field( 'post_modified', $source_attachment_id );
@@ -635,15 +1199,28 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 			$target_last_sync = get_post_meta( $existing_id, '_acf_sms_last_sync', true );
 			$source_modified_time = strtotime( $source_modified );
 
-			// If source was modified after last sync, re-sync.
 			if ( ! $target_last_sync || $source_modified_time > $target_last_sync ) {
+				if ( ACF_LS_DEBUG ) {
+					error_log( 'ACF SMS: Existing attachment needs update' );
+				}
 				$target_id = $this->copy_attachment_to_current_site( $source_attachment_id, $source_site_id, $existing_id );
 			} else {
+				if ( ACF_LS_DEBUG ) {
+					error_log( 'ACF SMS: Existing attachment is up to date' );
+				}
 				$target_id = $existing_id;
 			}
 		} else {
-			// Create new attachment.
-			$target_id = $this->copy_attachment_to_current_site( $source_attachment_id, $source_site_id );
+			// Create new attachment (or force re-create).
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: Creating new attachment (force=%s, existing=%s)', 
+					$force ? 'yes' : 'no', $existing_id ?: 'none' ) );
+			}
+			$target_id = $this->copy_attachment_to_current_site( $source_attachment_id, $source_site_id, $force ? null : $existing_id );
+		}
+
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: sync_attachment END - result: %s', $target_id ?: 'FAILED' ) );
 		}
 
 		// Cache the result.
@@ -652,6 +1229,137 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 		}
 
 		return $target_id;
+	}
+
+	/**
+	 * Force sync a profile picture to all target sites.
+	 * This bypasses all caching and existing attachment checks.
+	 *
+	 * @since 2.4.0
+	 * @param int $team_member_id Team member post ID on master site.
+	 * @return array Results for each target site.
+	 */
+	public function force_sync_profile_picture( $team_member_id ) {
+		$results = array();
+		$master_site_id = $this->get_master_site();
+		$sync_sites = $this->get_sync_sites();
+		
+		// Get source data from master site.
+		switch_to_blog( $master_site_id );
+		
+		$team_member = get_post( $team_member_id );
+		if ( ! $team_member || $team_member->post_type !== 'team-member' ) {
+			restore_current_blog();
+			return array( 'error' => 'Invalid team member ID' );
+		}
+		
+		$source_attachment_id = get_post_meta( $team_member_id, 'profile_picture', true );
+		$field_key = get_post_meta( $team_member_id, '_profile_picture', true );
+		
+		if ( empty( $source_attachment_id ) ) {
+			restore_current_blog();
+			return array( 'error' => 'No profile picture on master site' );
+		}
+		
+		// Get source file info.
+		$source_file = get_attached_file( $source_attachment_id );
+		$source_file_exists = $source_file && file_exists( $source_file );
+		
+		$results['master'] = array(
+			'site_id' => $master_site_id,
+			'team_member_id' => $team_member_id,
+			'team_member_title' => $team_member->post_title,
+			'attachment_id' => $source_attachment_id,
+			'file_path' => $source_file,
+			'file_exists' => $source_file_exists,
+		);
+		
+		if ( ! $source_file_exists ) {
+			restore_current_blog();
+			return array_merge( $results, array( 'error' => 'Source file does not exist: ' . $source_file ) );
+		}
+		
+		restore_current_blog();
+		
+		// Clear cache completely.
+		$this->attachment_id_cache = array();
+		
+		// Sync to each target site.
+		foreach ( $sync_sites as $site_id ) {
+			$site_id = (int) $site_id;
+			if ( $site_id === $master_site_id ) {
+				continue;
+			}
+			
+			$site_result = array(
+				'site_id' => $site_id,
+				'steps' => array(),
+			);
+			
+			switch_to_blog( $site_id );
+			
+			$site_result['steps'][] = 'Switched to site ' . $site_id;
+			
+			// Find synced team member post.
+			global $wpdb;
+			$synced_post_id = $wpdb->get_var( $wpdb->prepare(
+				"SELECT post_id FROM {$wpdb->postmeta} 
+				WHERE meta_key = '_acf_sms_source_post' AND meta_value = %d
+				AND post_id IN (
+					SELECT post_id FROM {$wpdb->postmeta}
+					WHERE meta_key = '_acf_sms_source_site' AND meta_value = %d
+				)
+				LIMIT 1",
+				$team_member_id,
+				$master_site_id
+			) );
+			
+			if ( ! $synced_post_id ) {
+				$site_result['error'] = 'Team member not synced to this site';
+				$results['sites'][] = $site_result;
+				restore_current_blog();
+				continue;
+			}
+			
+			$site_result['synced_post_id'] = $synced_post_id;
+			$site_result['steps'][] = 'Found synced post: ' . $synced_post_id;
+			
+			// Force copy the attachment.
+			$target_attachment_id = $this->copy_attachment_to_current_site( $source_attachment_id, $master_site_id, null );
+			
+			if ( ! $target_attachment_id ) {
+				$site_result['error'] = 'Failed to copy attachment';
+				$results['sites'][] = $site_result;
+				restore_current_blog();
+				continue;
+			}
+			
+			$site_result['new_attachment_id'] = $target_attachment_id;
+			$site_result['steps'][] = 'Created new attachment: ' . $target_attachment_id;
+			
+			// Verify the file was copied.
+			$target_file = get_attached_file( $target_attachment_id );
+			$site_result['target_file'] = $target_file;
+			$site_result['target_file_exists'] = $target_file && file_exists( $target_file );
+			$site_result['steps'][] = 'Target file: ' . $target_file . ' (exists: ' . ( $site_result['target_file_exists'] ? 'yes' : 'no' ) . ')';
+			
+			// Update the profile_picture field.
+			update_post_meta( $synced_post_id, 'profile_picture', $target_attachment_id );
+			update_post_meta( $synced_post_id, '_profile_picture', $field_key ?: 'field_68f69441b39f5' );
+			
+			$site_result['steps'][] = 'Updated profile_picture meta to ' . $target_attachment_id;
+			
+			// Verify.
+			$verify = get_post_meta( $synced_post_id, 'profile_picture', true );
+			$site_result['verification'] = $verify;
+			$site_result['success'] = ( (int) $verify === (int) $target_attachment_id );
+			
+			$results['sites'][] = $site_result;
+			
+			restore_current_blog();
+		}
+		
+		return $results;
 	}
 
 	/**
@@ -664,28 +1372,61 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 	 * @return int|false Target attachment ID or false on failure.
 	 */
 	private function copy_attachment_to_current_site( $source_attachment_id, $source_site_id, $existing_id = null ) {
-		// Get source attachment data.
+		// Store the current (target) site ID.
+		$target_site_id = get_current_blog_id();
+		
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: copy_attachment_to_current_site - source attachment: %d, source site: %d, target site: %d', 
+				$source_attachment_id, $source_site_id, $target_site_id ) );
+		}
+		
+		// Get source attachment data while on source site.
 		switch_to_blog( $source_site_id );
 		
 		$source_file = get_attached_file( $source_attachment_id );
 		$source_post = get_post( $source_attachment_id );
 		$source_metadata = wp_get_attachment_metadata( $source_attachment_id );
 		
-		if ( ! $source_file || ! file_exists( $source_file ) || ! $source_post ) {
+		// Store the source file path before restoring - this is the absolute filesystem path.
+		$source_file_path = $source_file;
+		$source_file_exists = $source_file && file_exists( $source_file );
+		$source_file_size = $source_file_exists ? filesize( $source_file ) : 0;
+		
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: Source file path: %s, exists: %s, size: %d', 
+				$source_file_path, $source_file_exists ? 'yes' : 'no', $source_file_size ) );
+		}
+		
+		if ( ! $source_file_path || ! $source_file_exists || ! $source_post ) {
 			restore_current_blog();
 			if ( ACF_LS_DEBUG ) {
-				error_log( sprintf( 'ACF SMS: Source attachment file not found: %d', $source_attachment_id ) );
+				error_log( sprintf( 'ACF SMS: Source attachment invalid - file: %s, exists: %s, post: %s', 
+					$source_file_path ?: 'null', 
+					$source_file_exists ? 'yes' : 'no',
+					$source_post ? 'yes' : 'no' ) );
 			}
 			return false;
 		}
 
 		// Get the file name.
-		$filename = basename( $source_file );
+		$filename = basename( $source_file_path );
+		
+		// Store source post data for later use.
+		$source_post_title = $source_post->post_title;
+		$source_post_content = $source_post->post_content;
+		$source_post_excerpt = $source_post->post_excerpt;
+		$source_mime_type = $source_post->post_mime_type;
+		$source_alt_text = get_post_meta( $source_attachment_id, '_wp_attachment_image_alt', true );
 		
 		restore_current_blog();
-
-		// Get upload directory info for target site.
+		
+		// Now we're back on the target site - get upload directory.
 		$upload_dir = wp_upload_dir();
+		
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: Target upload dir: %s (error: %s)', 
+				$upload_dir['path'], $upload_dir['error'] ?: 'none' ) );
+		}
 		
 		if ( $upload_dir['error'] ) {
 			if ( ACF_LS_DEBUG ) {
@@ -694,34 +1435,107 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 			return false;
 		}
 
-		// Generate unique filename if needed.
-		$target_file = $upload_dir['path'] . '/' . $filename;
-		$target_file = wp_unique_filename( $upload_dir['path'], $filename );
-		$target_file_path = $upload_dir['path'] . '/' . $target_file;
+		// Check if we're updating an existing attachment.
+		if ( $existing_id ) {
+			// Get existing file path.
+			$existing_file = get_attached_file( $existing_id );
+			$target_size = $existing_file && file_exists( $existing_file ) ? filesize( $existing_file ) : 0;
+			
+			if ( $existing_file && file_exists( $existing_file ) && $source_file_size === $target_size && $source_file_size > 0 ) {
+				// File is identical, just update metadata.
+				if ( ACF_LS_DEBUG ) {
+					error_log( sprintf( 'ACF SMS: Attachment %d already synced with identical file (%d bytes), updating metadata only', 
+						$source_attachment_id, $source_file_size ) );
+				}
+				
+				// Update sync timestamp.
+				update_post_meta( $existing_id, '_acf_sms_last_sync', current_time( 'timestamp' ) );
+				
+				return $existing_id;
+			}
+			
+			// Use existing file path for update.
+			$target_file_path = $existing_file;
+			
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: Updating existing attachment at: %s', $target_file_path ) );
+			}
+		} else {
+			// Generate unique filename if needed.
+			$target_file = wp_unique_filename( $upload_dir['path'], $filename );
+			$target_file_path = $upload_dir['path'] . '/' . $target_file;
+			
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: Creating new attachment at: %s', $target_file_path ) );
+			}
+		}
 
-		// Copy the file.
-		switch_to_blog( $source_site_id );
-		$source_file = get_attached_file( $source_attachment_id );
-		$copied = copy( $source_file, $target_file_path );
-		restore_current_blog();
+		// Create target directory if it doesn't exist.
+		$target_dir = dirname( $target_file_path );
+		if ( ! file_exists( $target_dir ) ) {
+			$mkdir_result = wp_mkdir_p( $target_dir );
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: Created directory %s: %s', $target_dir, $mkdir_result ? 'success' : 'failed' ) );
+			}
+		}
+		
+		// Copy the file using the stored source path (absolute filesystem path).
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: Copying file from %s to %s', $source_file_path, $target_file_path ) );
+		}
+		
+		$copied = @copy( $source_file_path, $target_file_path );
+		
+		if ( ! $copied ) {
+			// Try alternative method using file_get_contents/file_put_contents.
+			$file_contents = @file_get_contents( $source_file_path );
+			if ( $file_contents !== false ) {
+				$bytes_written = @file_put_contents( $target_file_path, $file_contents );
+				$copied = ( $bytes_written !== false && $bytes_written > 0 );
+				
+				if ( ACF_LS_DEBUG ) {
+					error_log( sprintf( 'ACF SMS: Alternative copy method - bytes written: %s', 
+						$bytes_written !== false ? $bytes_written : 'failed' ) );
+				}
+			}
+		}
 
 		if ( ! $copied ) {
 			if ( ACF_LS_DEBUG ) {
-				error_log( sprintf( 'ACF SMS: Failed to copy file from %s to %s', $source_file, $target_file_path ) );
+				error_log( sprintf( 'ACF SMS: Failed to copy file from %s to %s - check file permissions', 
+					$source_file_path, $target_file_path ) );
+				error_log( sprintf( 'ACF SMS: Source readable: %s, Target dir writable: %s', 
+					is_readable( $source_file_path ) ? 'yes' : 'no',
+					is_writable( $target_dir ) ? 'yes' : 'no' ) );
 			}
 			return false;
 		}
 
+		// Verify the copied file exists.
+		if ( ! file_exists( $target_file_path ) ) {
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: Target file does not exist after copy: %s', $target_file_path ) );
+			}
+			return false;
+		}
+		
+		$copied_size = filesize( $target_file_path );
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: File copied successfully - size: %d bytes (source was %d bytes)', 
+				$copied_size, $source_file_size ) );
+		}
+
 		// Get file type.
 		$file_type = wp_check_filetype( $target_file_path );
+		$mime_type = $file_type['type'] ?: $source_mime_type;
 
-		// Prepare attachment data.
+		// Prepare attachment data using stored source data.
 		$attachment_data = array(
-			'post_title'     => $source_post->post_title,
-			'post_content'   => $source_post->post_content,
-			'post_excerpt'   => $source_post->post_excerpt,
+			'post_title'     => $source_post_title ?: $filename,
+			'post_content'   => $source_post_content,
+			'post_excerpt'   => $source_post_excerpt,
 			'post_status'    => 'inherit',
-			'post_mime_type' => $file_type['type'],
+			'post_mime_type' => $mime_type,
 		);
 
 		if ( $existing_id ) {
@@ -731,14 +1545,25 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 			
 			// Update the attached file path.
 			update_attached_file( $existing_id, $target_file_path );
+			
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: Updated existing attachment %d', $existing_id ) );
+			}
 		} else {
 			// Insert new attachment.
 			$attachment_id = wp_insert_attachment( $attachment_data, $target_file_path );
+			
+			if ( ACF_LS_DEBUG ) {
+				error_log( sprintf( 'ACF SMS: Inserted new attachment - result: %s', 
+					is_wp_error( $attachment_id ) ? $attachment_id->get_error_message() : $attachment_id ) );
+			}
 		}
 
 		if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
-			// Clean up copied file.
-			unlink( $target_file_path );
+			// Clean up copied file on error.
+			if ( file_exists( $target_file_path ) ) {
+				@unlink( $target_file_path );
+			}
 			if ( ACF_LS_DEBUG ) {
 				$error_msg = is_wp_error( $attachment_id ) ? $attachment_id->get_error_message() : 'Unknown error';
 				error_log( sprintf( 'ACF SMS: Failed to insert attachment: %s', $error_msg ) );
@@ -746,27 +1571,28 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 			return false;
 		}
 
-		// Generate attachment metadata.
+		// Generate attachment metadata (thumbnails, etc.).
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		$attach_data = wp_generate_attachment_metadata( $attachment_id, $target_file_path );
 		wp_update_attachment_metadata( $attachment_id, $attach_data );
+		
+		if ( ACF_LS_DEBUG ) {
+			error_log( sprintf( 'ACF SMS: Generated metadata for attachment %d', $attachment_id ) );
+		}
 
 		// Store sync metadata.
 		update_post_meta( $attachment_id, '_acf_sms_source_site', $source_site_id );
 		update_post_meta( $attachment_id, '_acf_sms_source_post', $source_attachment_id );
 		update_post_meta( $attachment_id, '_acf_sms_last_sync', current_time( 'timestamp' ) );
 
-		// Copy alt text and other meta.
-		switch_to_blog( $source_site_id );
-		$alt_text = get_post_meta( $source_attachment_id, '_wp_attachment_image_alt', true );
-		restore_current_blog();
-		
-		if ( $alt_text ) {
-			update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
+		// Copy alt text using the value we stored earlier.
+		if ( $source_alt_text ) {
+			update_post_meta( $attachment_id, '_wp_attachment_image_alt', $source_alt_text );
 		}
 
 		if ( ACF_LS_DEBUG ) {
-			error_log( sprintf( 'ACF SMS: Synced attachment %d to %d on site %d', $source_attachment_id, $attachment_id, get_current_blog_id() ) );
+			error_log( sprintf( 'ACF SMS: Successfully synced attachment %d to %d on site %d (file: %s)', 
+				$source_attachment_id, $attachment_id, get_current_blog_id(), basename( $target_file_path ) ) );
 		}
 
 		return $attachment_id;
@@ -993,13 +1819,25 @@ class ACF_Location_Shortcodes_Multisite_Sync {
 		}
 
 		$stats = array(
-			'enabled'   => $this->is_sync_enabled(),
-			'sites'     => count( $this->get_sync_sites() ),
-			'locations' => wp_count_posts( 'location' )->publish,
-			'members'   => wp_count_posts( 'team-member' )->publish,
+			'enabled'    => $this->is_sync_enabled(),
+			'sites'      => count( $this->get_sync_sites() ),
+			'locations'  => wp_count_posts( 'location' )->publish,
+			'members'    => wp_count_posts( 'team-member' )->publish,
+			'services'   => post_type_exists( 'service' ) ? wp_count_posts( 'service' )->publish : 0,
+			'conditions' => post_type_exists( 'condition' ) ? wp_count_posts( 'condition' )->publish : 0,
 		);
 
 		wp_send_json_success( $stats );
+	}
+
+	/**
+	 * Get the post types that are synced.
+	 *
+	 * @since 2.4.0
+	 * @return array Array of post type slugs.
+	 */
+	public function get_sync_post_types() {
+		return apply_filters( 'acf_sms_sync_post_types', $this->sync_post_types );
 	}
 
 	/**
