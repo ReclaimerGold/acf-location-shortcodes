@@ -6,7 +6,7 @@ Built on Advanced Custom Fields (ACF), this plugin provides powerful shortcodes,
 
 [![WordPress Version](https://img.shields.io/badge/WordPress-5.8%2B-blue?logo=wordpress)](https://wordpress.org)
 [![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-purple?logo=php)](https://php.net)
-[![Version](https://img.shields.io/badge/Version-2.2.0-green)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.3.0-green)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-GPLv2-red)](LICENSE)
 [![Tests](https://github.com/ReclaimerGold/acf-location-shortcodes/actions/workflows/test.yml/badge.svg)](https://github.com/ReclaimerGold/acf-location-shortcodes/actions/workflows/test.yml)
 [![GitHub Issues](https://img.shields.io/github/issues/ReclaimerGold/acf-location-shortcodes)](https://github.com/ReclaimerGold/acf-location-shortcodes/issues)
@@ -43,10 +43,36 @@ Built on Advanced Custom Fields (ACF), this plugin provides powerful shortcodes,
 - **⚡ Performance Optimized** - Intelligent caching and minimal resource usage
 - **🛡️ Secure** - Follows WordPress coding standards with proper sanitization and escaping
 - **📦 Complete Post Type Structure** - Includes ACF field configurations for immediate deployment
+- **🌐 Site Location Settings** - *(New in 2.3.0)* Configure site-specific location info for multisite networks
+- **🔄 Enhanced Media Sync** - *(New in 2.3.0)* Improved attachment synchronization with smart duplicate detection
 
 ## Features
 
-### � Complete Post Type Structure
+### 🌐 Site Location Settings *(New in 2.3.0)*
+
+Associate each site with a Location post to access all location data globally:
+
+- **Per-Site Configuration:** Settings > Site Location
+- **How It Works:** Select a Location post in Settings > Site Location. All ACF fields from that location are automatically available sitewide.
+- **Required ACF Fields:** Add these fields to your Location post type:
+  - `location_city` (Text) - City name
+  - `location_state` (Text) - Full state name
+  - `location_state_abbrev` (Text) - 2-letter state abbreviation
+  - Plus any existing fields: `metro_area_name`, `county_name`, `full_service_area_name`, etc.
+- **Shortcodes:** Access location data anywhere: `[location_info field="county_name"]`, `[site_service_areas]`
+- **Elementor Integration:** Dynamic tags pull data from the associated location
+- **Perfect for:** Multi-location businesses where each site represents a different location
+
+**Setup Steps:**
+1. Add the required ACF fields (`location_city`, `location_state`, `location_state_abbrev`) to your Location post type
+2. Edit your Location posts and populate all fields (city, state, county, metro area, etc.)
+3. Go to Settings > Site Location on each site
+4. Select the Location post that represents that site
+5. Use shortcodes to display location data anywhere on the site
+
+[📖 See Site Location Settings Documentation](SITE_LOCATION_SETTINGS.md)
+
+### 📦 Complete Post Type Structure
 
 Includes pre-configured ACF field groups for:
 
@@ -349,6 +375,8 @@ This enables verbose error messages with helpful debugging information (only vis
 
 ## Shortcode Reference
 
+> **💡 Pro Tip:** For site-wide location data, use `[location_info field="FIELD_NAME"]` to access ANY ACF field from the Location post associated in Settings > Site Location. This works for `county_name`, `metro_area_name`, `full_service_area_name`, and any custom fields you add!
+
 ### `[location_communities]`
 
 Display surrounding communities as a horizontal list.
@@ -391,7 +419,7 @@ Display a directory of locations with filtering.
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `location_specific` | bool | false | Enable context-aware mode (parent + children only) |
-| `location_id` | int | Current post ID | Location post to use |
+| `location_id` | int | Current post ID or Site Location | Location post to use |
 | `type` | string | 'all' | Filter: 'all', 'physical', 'service' |
 | `orderby` | string | 'title' | Sort by: 'title', 'date', 'ID' |
 | `order` | string | 'ASC' | Sort order: 'ASC' or 'DESC' |
@@ -399,9 +427,15 @@ Display a directory of locations with filtering.
 | `class` | string | '' | Additional CSS class |
 | `show_emoji` | string | 'yes' | Show map pin emoji |
 
+**Smart Behavior:**
+- **On Location pages:** Uses the current Location post
+- **On non-Location pages (e.g., homepage):** Automatically uses the Location from Settings > Site Location and enables location-specific mode
+- **Override:** Explicitly set `location_id` to use a specific location anywhere
+
 **Example:**
 ```shortcode
 [location_list type="physical" orderby="title" order="ASC"]
+[location_list location_id="123"]
 ```
 
 ---
@@ -420,6 +454,226 @@ Get the physical address for a location (or its parent location).
 ```shortcode
 [location_address location_id="456"]
 ```
+
+---
+
+### `[site_location_title]`
+
+Display the post title from the associated Location post (typically the city name).
+
+**No attributes**
+
+**Requires:** 
+- A Location selected in Settings > Site Location
+
+**Example:**
+```shortcode
+[site_location_title]
+```
+
+**Returns:** `Sioux Falls` (the title of the Location post)
+
+---
+
+### `[site_location_city]`
+
+Display the city from the associated Location post's ACF fields.
+
+**No attributes**
+
+**Requires:** 
+- ACF field `location_city` on your Location post type
+- A Location selected in Settings > Site Location
+
+**Example:**
+```shortcode
+[site_location_city]
+```
+
+**Returns:** `Sioux Falls`
+
+---
+
+### `[site_location_state]`
+
+Display the state from the associated Location post's ACF fields.
+
+**No attributes**
+
+**Requires:** 
+- ACF field `location_state` on your Location post type
+- A Location selected in Settings > Site Location
+
+**Example:**
+```shortcode
+[site_location_state]
+```
+
+**Returns:** `South Dakota`
+
+---
+
+### `[site_location_state_abbrev]`
+
+Display the state abbreviation from the associated Location post's ACF fields.
+
+**No attributes**
+
+**Requires:** 
+- ACF field `location_state_abbrev` on your Location post type
+- A Location selected in Settings > Site Location
+
+**Example:**
+```shortcode
+[site_location_state_abbrev]
+```
+
+**Returns:** `SD`
+
+---
+
+### `[site_location_city_state]`
+
+Display the city and state from the associated Location post's ACF fields.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `format` | string | 'abbrev' | Format: 'abbrev' or 'full' |
+
+**Requires:** 
+- ACF fields `location_city`, `location_state`, and `location_state_abbrev` on your Location post type
+- A Location selected in Settings > Site Location
+
+**Examples:**
+```shortcode
+[site_location_city_state]
+[site_location_city_state format="full"]
+```
+
+**Returns:** 
+- `abbrev`: `Sioux Falls, SD`
+- `full`: `Sioux Falls, South Dakota`
+
+---
+
+### `[site_service_areas]`
+
+Display service areas for the associated location (automatically retrieves child Location posts).
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `format` | string | 'comma_and' | Format: 'comma', 'comma_and', 'comma_and_surrounding', or 'list' |
+
+**Requires:** 
+- A Location selected in Settings > Site Location
+- Child Location posts (service areas) associated with the parent location
+
+**Examples:**
+```shortcode
+[site_service_areas]
+[site_service_areas format="comma"]
+[site_service_areas format="comma_and_surrounding"]
+[site_service_areas format="list"]
+```
+
+**Returns (examples):**
+- `comma_and`: `Sioux Falls, Brandon, and Harrisburg`
+- `comma`: `Sioux Falls, Brandon, Harrisburg`
+- `comma_and_surrounding`: `Sioux Falls, Brandon, and surrounding locations`
+- `list`: 
+  ```html
+  <ul class="acf-sms-service-areas-list">
+    <li>Sioux Falls</li>
+    <li>Brandon</li>
+    <li>Harrisburg</li>
+  </ul>
+  ```
+
+**Configure via:** Settings > Site Location
+
+---
+
+### `[team_member_locations]`
+
+Display a list of locations assigned to the team member. Should be used on a team-member post page.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `team_member_id` | int | Current post ID | Team member post to display |
+| `format` | string | 'comma' | Format: 'comma', 'comma_and', or 'list' |
+| `class` | string | '' | Additional CSS class |
+
+**Formats:**
+- `comma`: Comma-separated list (e.g., "Sioux Falls, Brandon, Harrisburg")
+- `comma_and`: Comma-separated with "and" before last item (e.g., "Sioux Falls, Brandon, and Harrisburg")
+- `list`: HTML unordered list
+
+**Requires:**
+- Must be used on a team-member post page (or provide `team_member_id` attribute)
+- Team member must have locations assigned via the `location` ACF field
+
+**Examples:**
+```shortcode
+[team_member_locations]
+[team_member_locations format="comma_and"]
+[team_member_locations format="list" class="my-locations"]
+[team_member_locations team_member_id="123" format="comma"]
+```
+
+**Returns (examples):**
+- `comma`: `Sioux Falls, Brandon, Harrisburg`
+- `comma_and`: `Sioux Falls, Brandon, and Harrisburg`
+- `list`: 
+  ```html
+  <ul class="acf-ls-team-member-locations">
+    <li>Sioux Falls</li>
+    <li>Brandon</li>
+    <li>Harrisburg</li>
+  </ul>
+  ```
+
+---
+
+### `[team_member_specialties]`
+
+Display a list of specialties (services) assigned to the team member. Should be used on a team-member post page.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `team_member_id` | int | Current post ID | Team member post to display |
+| `format` | string | 'comma' | Format: 'comma', 'comma_and', or 'list' |
+| `class` | string | '' | Additional CSS class |
+
+**Formats:**
+- `comma`: Comma-separated list (e.g., "Dermatology, Cosmetic Surgery, Botox")
+- `comma_and`: Comma-separated with "and" before last item (e.g., "Dermatology, Cosmetic Surgery, and Botox")
+- `list`: HTML unordered list
+
+**Requires:**
+- Must be used on a team-member post page (or provide `team_member_id` attribute)
+- Team member must have specialties assigned via the `specialties` ACF field
+
+**Examples:**
+```shortcode
+[team_member_specialties]
+[team_member_specialties format="comma_and"]
+[team_member_specialties format="list" class="my-specialties"]
+[team_member_specialties team_member_id="123" format="comma"]
+```
+
+**Returns (examples):**
+- `comma`: `Dermatology, Cosmetic Surgery, Botox`
+- `comma_and`: `Dermatology, Cosmetic Surgery, and Botox`
+- `list`: 
+  ```html
+  <ul class="acf-ls-team-member-specialties">
+    <li>Dermatology</li>
+    <li>Cosmetic Surgery</li>
+    <li>Botox</li>
+  </ul>
+  ```
+
+---
 
 > 📖 **For more documentation:** See [DEVELOP.md](DEVELOP.md) for extension guide and [CHANGELOG.md](CHANGELOG.md) for version history
 
@@ -462,7 +716,31 @@ Get the physical address for a location (or its parent location).
 4. **Query > Select Locations:** Choose location(s)
 5. **Query > Relationship Field Name:** `assigned_location`
 
-### Example 4: Google Maps Integration
+### Example 4: Team Member Profile Page
+
+On a team-member post page, display assigned locations and specialties:
+
+```html
+<h2>Service Locations</h2>
+<p>I serve the following locations:</p>
+[team_member_locations format="comma_and"]
+
+<h2>Specialties</h2>
+<p>My areas of expertise include:</p>
+[team_member_specialties format="comma_and"]
+```
+
+Or as lists:
+
+```html
+<h2>Service Locations</h2>
+[team_member_locations format="list"]
+
+<h2>Specialties</h2>
+[team_member_specialties format="list"]
+```
+
+### Example 5: Google Maps Integration
 
 In Elementor Google Map widget Address field:
 ```
@@ -471,7 +749,7 @@ In Elementor Google Map widget Address field:
 
 This automatically shows the correct physical address, even for service areas (uses parent location).
 
-### Example 5: Custom Styled Communities
+### Example 6: Custom Styled Communities
 
 ```
 [location_communities class="badge-style" show_emoji="no"]
@@ -511,6 +789,13 @@ acf-service-management-suite/
 ## ACF Field Schema
 
 This plugin includes a complete ACF export file (`acf-export-2025-10-28.json`) ready to import. It creates:
+
+> **⚠️ Important for Site Location Features:** To use site-wide location shortcodes (`[site_location_city]`, etc.), you must ADD these additional fields to your Location post type:
+> - `location_city` (Text) - City name
+> - `location_state` (Text) - Full state name  
+> - `location_state_abbrev` (Text) - 2-letter state abbreviation
+>
+> These are not included in the default export but are required for the site location association feature.
 
 ### Post Types
 
