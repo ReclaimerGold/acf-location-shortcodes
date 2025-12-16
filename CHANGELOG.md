@@ -15,6 +15,165 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.0] - 2025-12-16
+
+### Added
+- **Extended Multisite Sync** - Now syncs all service-related content types
+  - **Services** (`service`) - Service offerings with full ACF field support
+  - **Conditions** (`condition`) - Medical/service conditions
+  - Previously synced: Locations and Team Members
+  
+- **Taxonomy Synchronization** - Full taxonomy support across network
+  - **Service Categories** (`service-category`) - Hierarchical categories with parent-child sync
+  - **Service Tags** (`service-tag`) - Non-hierarchical tags
+  - **Team Member Types** (`team-member-type`) - Staff categorization
+  - Automatic term creation on target sites when terms don't exist
+  - Preserves hierarchical relationships for category structures
+  
+- **Relationship Field Remapping** - Intelligent cross-site ID mapping
+  - `servicing_physical_location` - Links service areas to physical locations
+  - `team_members_assigned` - Team member assignments on locations
+  - `location` - Team member location assignments
+  - `specialties` - Team member service specializations
+  - Automatic fallback to slug-based matching when ID mapping unavailable
+  - Supports both `relationship` and `post_object` ACF field types
+
+- **Network Admin Enhancements**
+  - Status tab now shows Services and Conditions counts per site
+  - Sync Settings displays all synced content types with descriptions
+  - Improved sync progress reporting with per-type breakdown
+  
+- **Comprehensive Diagnostics Tab** - New tab for troubleshooting sync issues
+  - **Configuration Overview** - Shows sync status, master site, target sites, debug mode
+  - **Visual Sync Relationship Map** - Graphical representation of master → target site flow
+  - **Content Sync Status by Site** - Detailed counts for each post type per site
+  - **Profile Picture Status** - Shows which team members have/don't have pictures, identifies issues
+  - **Profile Picture Issue Detection** - Finds missing attachments and missing files
+  - **Test Profile Picture Sync Tool** - Enter a post ID to see detailed sync status across all sites
+  - **Debug Log Viewer** - View recent ACF SMS log entries directly in admin
+  - Real-time JSON output for sync testing
+  
+- **JSON Diagnostic Export for AI Integration**
+  - One-click export of comprehensive diagnostic data
+  - Designed for copy-paste into AI assistants (Cursor, ChatGPT, Claude)
+  - Includes:
+    - Export metadata (timestamp, versions)
+    - Full site configuration
+    - All sites with post counts, sync status, upload paths
+    - Complete team member list with profile picture details
+    - Cross-site sync mapping for each team member
+    - Automated issue detection with severity levels
+    - Summary statistics
+  - Copy to clipboard functionality
+  - Instructions for AI-assisted debugging
+  
+- **Advanced Real-Time Progress Tracking** - Complete overhaul of sync UI
+  - Individual progress bars for each post type (Locations, Services, Conditions, Team Members)
+  - Relationship fields progress tracking
+  - Taxonomy sync progress tracking  
+  - Media files sync progress tracking
+  - Master progress bar showing total quantified progress with percentage
+  - Color-coded progress bars for each content type
+  - Real-time sync log with timestamped entries
+  - Batch processing (5 posts at a time) for better performance
+  - Non-blocking UI with spinning animation during sync
+  
+### Improved
+- **Media Synchronization** - Robust attachment syncing for image fields
+  - Team member profile pictures (`profile_picture` field) synced to all network sites
+  - Featured images synced for all post types
+  - Error handling prevents data corruption on sync failures
+  - Debug logging for media sync operations
+  - File integrity checking to avoid unnecessary re-copying
+  - Multiple fallback detection methods:
+    - ACF field type detection
+    - Known image field names (`profile_picture`, `servcat_featured_image`)
+    - Value structure analysis (detects image arrays by keys)
+  - Field update fallbacks:
+    - Primary: `update_field()` by field name
+    - Secondary: `update_field()` by field key
+    - Tertiary: Direct `update_post_meta()` with field key reference
+
+- **Sync Order Optimization** - Posts now sync in dependency order
+  - Locations sync first (required by other relationships)
+  - Services sync second (required by team member specialties)
+  - Conditions sync third
+  - Team Members sync last (depend on locations and services)
+  
+- **Taxonomy Sync** - Enhanced hierarchical term handling
+  - Creates parent terms before child terms
+  - Properly links terms to parents on target sites
+  - Preserves term descriptions and slugs
+
+### Fixed
+- **Duplicate Post Linking** - Fixed issue where existing posts on target sites were skipped
+  - Previously, sync would skip posts if a matching post (by title+slug) already existed
+  - Now properly links existing posts to the master source, enabling ACF field sync
+  - Resolves issue where team members created before sync was enabled wouldn't sync
+  - Profile pictures and other ACF fields now sync to pre-existing posts
+  
+- **Attachment Cache Cross-Site Bug** - Fixed attachment ID caching issue
+  - Cache key now includes target site ID to prevent cross-site ID confusion
+  - Each target site gets unique attachment copies instead of shared IDs
+  - Resolves "file missing" errors on sites 7, 9, 10 when site 4 synced first
+
+- **Force Sync Feature** - Added ability to force-sync profile pictures
+  - New "Force Sync Profile Picture" button in Diagnostics tab
+  - Bypasses all caching for debugging purposes
+  - Returns detailed step-by-step results for troubleshooting
+
+### Technical
+- Added `get_sync_post_types()` public method for extensibility
+- Added `$relationship_fields` mapping array for relationship handling
+- Added `$sync_taxonomies` configuration for post type taxonomy assignments
+- New `remap_relationship_field()` method for cross-site ID mapping
+- New `sync_hierarchical_terms()` method for proper taxonomy hierarchy sync
+- New AJAX endpoint `acf_sms_get_sync_counts` for pre-sync item counting
+- New AJAX endpoint `acf_sms_sync_batch` for batch processing with progress tracking
+- Batch size of 5 posts per request for optimal performance
+
+---
+
+## [2.3.0] - 2025-11-07
+
+### Added
+- **Site Location Settings** - Per-site location configuration
+  - New settings page: **Settings > Site Location**
+  - Configure city, state, and state abbreviation for each site
+  - Ideal for multisite networks where each site represents a different location
+  - Settings accessible via admin options page
+  
+- **Site Location Shortcodes** - 4 new shortcodes for dynamic location data
+  - `[site_location_city]` - Display site city name
+  - `[site_location_state]` - Display full state name
+  - `[site_location_state_abbrev]` - Display 2-letter state abbreviation
+  - `[site_location_city_state]` - Display formatted city and state (supports 'abbrev' or 'full' format)
+  - All shortcodes work in page content, widgets, and Elementor
+  
+- **Elementor Dynamic Tags** - Site location tags for Elementor editor
+  - New "Site Location" dynamic tag group
+  - 4 dynamic tags matching shortcode functionality
+  - Tags work in any text field supporting dynamic content
+  - Format options for city/state combination tag
+  - Perfect for reusable Elementor templates across network sites
+
+### Improved
+- **Media Sync** - Enhanced attachment synchronization
+  - Smart duplicate detection checks file size before re-copying
+  - Avoids unnecessary file transfers when content unchanged
+  - Better error handling with comprehensive validation
+  - Automatic directory creation when missing
+  - Cleanup of failed copies prevents orphaned files
+  - Only regenerates metadata when file actually changes
+  - Improved debug logging for troubleshooting
+
+### Documentation
+- Added comprehensive `SITE_LOCATION_SETTINGS.md` documentation
+- Updated README with site location features
+- Added usage examples for all new shortcodes and dynamic tags
+
+---
+
 ## [2.2.0] - 2025-10-31
 
 ### Added
@@ -295,4 +454,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-**Last Updated:** October 27, 2025
+**Last Updated:** December 16, 2025
