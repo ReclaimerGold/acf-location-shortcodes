@@ -91,3 +91,6 @@ languages/*.pot
 # Generated Documentation (if using doc generators)
 /docs/_build/
 /docs/.doctrees/
+
+# ACF Export files (site-specific data)
+acf-export-*.json
