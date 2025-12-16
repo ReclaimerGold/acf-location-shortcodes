@@ -28,13 +28,22 @@ class ACF_Location_Shortcodes_Elementor {
 	private $acf_helpers;
 
 	/**
+	 * Site settings instance.
+	 *
+	 * @var ACF_Location_Shortcodes_Site_Settings
+	 */
+	private $site_settings;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
 	 * @param ACF_Location_Shortcodes_ACF_Helpers $acf_helpers ACF helpers instance.
+	 * @param ACF_Location_Shortcodes_Site_Settings $site_settings Site settings instance.
 	 */
-	public function __construct( $acf_helpers ) {
+	public function __construct( $acf_helpers, $site_settings = null ) {
 		$this->acf_helpers = $acf_helpers;
+		$this->site_settings = $site_settings;
 		$this->init_hooks();
 	}
 
@@ -55,8 +64,14 @@ class ACF_Location_Shortcodes_Elementor {
 		// Filter the query.
 		add_filter( 'elementor/query/query_args', array( $this, 'filter_query_by_location' ), 10, 2 );
 
+		// Register dynamic tags.
+		add_action( 'elementor/dynamic_tags/register', array( $this, 'register_dynamic_tags' ) );
+
 		// Enqueue editor scripts.
 		add_action( 'elementor/editor/after_enqueue_scripts', array( $this, 'enqueue_editor_scripts' ) );
+
+		// Note: Elementor Display Conditions fix is now handled in the main plugin class
+		// to ensure it runs even if this integration class isn't loaded.
 	}
 
 	/**
@@ -223,7 +238,130 @@ class ACF_Location_Shortcodes_Elementor {
 		return $query_args;
 	}
 
+	/**
+	 * Register dynamic tags.
+	 *
+	 * @since 2.3.0
+	 * @param \Elementor\Core\DynamicTags\Manager $dynamic_tags_manager Dynamic tags manager.
+	 */
+	public function register_dynamic_tags( $dynamic_tags_manager ) {
+		// Only register if site settings are available.
+		if ( ! $this->site_settings ) {
+			return;
+		}
 
+		// Register our custom group.
+		$dynamic_tags_manager->register_group(
+			'acf-sms-site-location',
+			array(
+				'title' => __( 'Site Location', 'acf-sms' ),
+			)
+		);
+
+		// Register individual tags.
+		require_once ACF_LS_PLUGIN_DIR . 'includes/elementor-tags/site-location-title.php';
+		require_once ACF_LS_PLUGIN_DIR . 'includes/elementor-tags/site-location-city.php';
+		require_once ACF_LS_PLUGIN_DIR . 'includes/elementor-tags/site-location-state.php';
+		require_once ACF_LS_PLUGIN_DIR . 'includes/elementor-tags/site-location-state-abbrev.php';
+		require_once ACF_LS_PLUGIN_DIR . 'includes/elementor-tags/site-location-city-state.php';
+		require_once ACF_LS_PLUGIN_DIR . 'includes/elementor-tags/site-service-areas.php';
+
+		$dynamic_tags_manager->register( new \ACF_SMS_Site_Location_Title_Tag( $this->site_settings ) );
+		$dynamic_tags_manager->register( new \ACF_SMS_Site_Location_City_Tag( $this->site_settings ) );
+		$dynamic_tags_manager->register( new \ACF_SMS_Site_Location_State_Tag( $this->site_settings ) );
+		$dynamic_tags_manager->register( new \ACF_SMS_Site_Location_State_Abbrev_Tag( $this->site_settings ) );
+		$dynamic_tags_manager->register( new \ACF_SMS_Site_Location_City_State_Tag( $this->site_settings ) );
+		$dynamic_tags_manager->register( new \ACF_SMS_Site_Service_Areas_Tag( $this->site_settings ) );
+	}
+
+
+	/**
+	 * Convert ACF relationship/post_object arrays to strings for Elementor compatibility.
+	 *
+	 * Elementor's Display Conditions expects strings, but ACF relationship fields
+	 * return arrays. This filter converts arrays to comma-separated strings when
+	 * Elementor Pro is active and we're on the frontend.
+	 *
+	 * @since 2.3.0
+	 * @param mixed  $value   The field value.
+	 * @param int    $post_id The post ID.
+	 * @param array  $field   The field array.
+	 * @return mixed The converted value (string if in Elementor context, original otherwise).
+	 */
+	public function convert_acf_arrays_to_strings_for_elementor( $value, $post_id, $field ) {
+		// Only process if Elementor Pro is active.
+		if ( ! defined( 'ELEMENTOR_PRO_VERSION' ) ) {
+			return $value;
+		}
+
+		// Only process on frontend (not admin).
+		if ( is_admin() && ! wp_doing_ajax() ) {
+			return $value;
+		}
+
+		// Get field type.
+		$field_type = isset( $field['type'] ) ? $field['type'] : '';
+
+		// Only process relationship and post_object fields.
+		if ( ! in_array( $field_type, array( 'relationship', 'post_object' ), true ) ) {
+			return $value;
+		}
+
+		// Handle empty values.
+		if ( empty( $value ) || $value === false || $value === null ) {
+			return '';
+		}
+
+		// Handle arrays (multiple selections).
+		if ( is_array( $value ) ) {
+			$titles = array();
+			foreach ( $value as $item ) {
+				$title = $this->extract_post_title( $item );
+				if ( ! empty( $title ) ) {
+					$titles[] = $title;
+				}
+			}
+			return ! empty( $titles ) ? implode( ', ', $titles ) : '';
+		}
+
+		// Handle single post object.
+		if ( is_object( $value ) ) {
+			$title = $this->extract_post_title( $value );
+			return ! empty( $title ) ? $title : '';
+		}
+
+		// Return original value if it's already a string.
+		return is_string( $value ) ? $value : '';
+	}
+
+	/**
+	 * Extract post title from various formats.
+	 *
+	 * @since 2.3.0
+	 * @param mixed $item The item (post object, array, or ID).
+	 * @return string The post title or empty string.
+	 */
+	private function extract_post_title( $item ) {
+		// Handle post object.
+		if ( is_object( $item ) && isset( $item->post_title ) ) {
+			return (string) $item->post_title;
+		}
+
+		// Handle array format.
+		if ( is_array( $item ) && isset( $item['post_title'] ) ) {
+			return (string) $item['post_title'];
+		}
+
+		// Handle ID.
+		if ( is_numeric( $item ) ) {
+			$post = get_post( absint( $item ) );
+			if ( $post && isset( $post->post_title ) ) {
+				return (string) $post->post_title;
+			}
+		}
+
+		return '';
+	}
 
 	/**
 	 * Enqueue editor scripts.
